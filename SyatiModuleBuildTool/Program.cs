@@ -28,20 +28,13 @@ internal class Program
         Console.Write("Loading Modules...");
         string[] DirectoriesInsideModules = Directory.GetDirectories(ModuleFolderPath, "*", SearchOption.TopDirectoryOnly);
         string[] ShortcutsInsideModules = Directory.GetFiles(ModuleFolderPath, "*.lnk", SearchOption.TopDirectoryOnly); //Shortcuts to module folders
+        string[] SymLinksInsideModules = Directory.GetFiles(ModuleFolderPath, "*.", SearchOption.TopDirectoryOnly); //Symlinks to module folders
         Console.WriteLine($"{DirectoriesInsideModules.Length + ShortcutsInsideModules.Length} found");
 
         int LoadedModuleNum = 0;
         for (int i = 0; i < DirectoriesInsideModules.Length; i++)
         {
-            string pth = DirectoriesInsideModules[i].Replace("\\", "/");
-            ModuleInfo? Info = ModuleInfo.Load(pth);
-            if (Info is null)
-            {
-                Console.WriteLine($"Failed to load module: \"{pth}\"");
-                continue;
-            }
-            Modules.Add(Info);
-            LoadedModuleNum++;
+            TryLoadModule(DirectoriesInsideModules[i]);
         }
 
         for (int i = 0; i < ShortcutsInsideModules.Length; i++)
@@ -53,16 +46,46 @@ internal class Program
                 continue;
             }
 
-            string pth = Target.Replace("\\", "/");
+            TryLoadModule(Target);
+        }
+
+        for (int i = 0; i < SymLinksInsideModules.Length; i++)
+        {
+            string t = File.ReadAllText(SymLinksInsideModules[i]);
+            if (t.StartsWith('.'))
+            {
+                string pt = Path.Combine(ModuleFolderPath, t);
+                t = Path.GetFullPath(new Uri(pt).LocalPath);
+            }
+
+            TryLoadModule(t);
+        }
+
+
+
+        void TryLoadModule(string ModulePath)
+        {
+            string pth = ModulePath.Replace("\\", "/");
+            for (int x = 0; x < Modules.Count; x++)
+            {
+                if (Modules[x].FolderPath.Equals(pth)) //Duplicate
+                {
+                    //Console.WriteLine($"Duplicate Module: \"{pth}\"");
+                    return;
+                }
+            }
+
             ModuleInfo? Info = ModuleInfo.Load(pth);
             if (Info is null)
             {
                 Console.WriteLine($"Failed to load module: \"{pth}\"");
-                continue;
+                return;
             }
             Modules.Add(Info);
             LoadedModuleNum++;
         }
+
+
 
         Console.WriteLine($"{LoadedModuleNum} modules loaded!");
 
