@@ -51,11 +51,19 @@ internal class Program
 
         for (int i = 0; i < SymLinksInsideModules.Length; i++)
         {
-            string t = File.ReadAllText(SymLinksInsideModules[i]);
-            if (t.StartsWith('.'))
+            string t;
+            try
             {
-                string pt = Path.Combine(ModuleFolderPath, t);
-                t = Path.GetFullPath(new Uri(pt).LocalPath);
+                t = File.ReadAllText(SymLinksInsideModules[i]);
+                if (t.StartsWith('.'))
+                {
+                    string pt = Path.Combine(ModuleFolderPath, t);
+                    t = Path.GetFullPath(new Uri(pt).LocalPath);
+                }
+            }
+            catch (Exception)
+            {
+                continue;
             }
 
             TryLoadModule(t);
