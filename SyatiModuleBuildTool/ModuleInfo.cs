@@ -44,7 +44,7 @@ public class ModuleInfo
         //Read the ModuleInfo
         string ModuleInfoFile = Path.Combine(FolderPath, "ModuleInfo.json");
         if (!File.Exists(ModuleInfoFile))
-            throw new FileNotFoundException($"!!ERROR!! Missing ModuleInfo.h for module {new DirectoryInfo(FolderPath).Name}.", ModuleInfoFile);
+            throw new FileNotFoundException($"!!ERROR!! Missing ModuleInfo.json for module {new DirectoryInfo(FolderPath).Name}.", ModuleInfoFile);
         Console.WriteLine($"Loading module from {FolderPath}");
 
         string content = File.ReadAllText(ModuleInfoFile);

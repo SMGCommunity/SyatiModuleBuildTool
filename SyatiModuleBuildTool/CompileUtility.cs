@@ -52,9 +52,9 @@ public static class CompileUtility
             string dir = new FileInfo(CompilerTasks[i].build).DirectoryName ?? throw new Exception();
             if (!Directory.Exists(dir))
                 Directory.CreateDirectory(dir);
-            if (LaunchProcess(Compiler, $"{CompileCommand} {Flags} {CompilerTasks[i].source} -o {CompilerTasks[i].build}") != 0)
+            if (LaunchProcess(Compiler, $"{CompileCommand} {Flags} \"{CompilerTasks[i].source}\" -o \"{CompilerTasks[i].build}\"") != 0)
             {
-                throw new Exception();
+                throw new Exception($"Failed to compile \"{CompilerTasks[i].source}\"");
             }
         }
         for (int i = 0; i < AssemblerTasks.Count; i++)
@@ -63,9 +63,9 @@ public static class CompileUtility
             string dir = new FileInfo(AssemblerTasks[i].build).DirectoryName ?? throw new Exception();
             if (!Directory.Exists(dir))
                 Directory.CreateDirectory(dir);
-            if (LaunchProcess(Assembler, $"{AssembleCommand} {Flags} {AssemblerTasks[i].source} -o {AssemblerTasks[i].build}") != 0)
+            if (LaunchProcess(Assembler, $"{AssembleCommand} {Flags} \"{AssemblerTasks[i].source}\" -o \"{AssemblerTasks[i].build}\"") != 0)
             {
-                throw new Exception();
+                throw new Exception($"Failed to assemble \"{AssemblerTasks[i].source}\"");
             }
         }
     }
