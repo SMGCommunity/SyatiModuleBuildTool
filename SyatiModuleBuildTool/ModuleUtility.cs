@@ -14,6 +14,7 @@ public static class ModuleUtility
         return [.. flags];
     }
 
+
     public static void PerformAllModuleCodeGen(List<ModuleInfo> Modules)
     {
         for (int i = 0; i < Modules.Count; i++)
@@ -166,8 +167,6 @@ public static class ModuleUtility
         }
     }
 
-
-
     public static string[] GetModuleDependancies(ModuleInfo MI, List<ModuleInfo> OtherModules)
     {
         if (MI.ModuleDependancies is null)
@@ -219,6 +218,7 @@ public static class ModuleUtility
         }
         return Includes;
     }
+
 
     public static string[] GetModuleExtensionIncludes(ModuleInfo MI)
     {
@@ -303,15 +303,20 @@ public static class ModuleUtility
 
 
 
-
-
+    public static string[] CollectModuleSymbols(List<ModuleInfo> Modules)
+    {
+        List<string> Paths = [];
+        foreach (ModuleInfo module in Modules)
+        {
+            string path = CreateModuleSymbolPath(module);
+            if (Directory.Exists(path))
+                Paths.Add(path);
+        }
+        return [.. Paths];
+    }
 
     public static string CreateModuleCodeGenBuildPath(ModuleInfo MI) => "\"" + Path.Combine(MI.FolderPath, "codebuild").Replace("\\", "/") + "\"";
     public static string CreateModuleIncludePath(ModuleInfo MI) => "\"" + Path.Combine(MI.FolderPath, "include").Replace("\\", "/") + "\"";
     public static string CreateModuleSourcePath(ModuleInfo MI) => "\"" + Path.Combine(MI.FolderPath, "source").Replace("\\", "/") + "\"";
-
-
-
-
-
+    public static string CreateModuleSymbolPath(ModuleInfo MI) => "\"" + Path.Combine(MI.FolderPath, "symbols").Replace("\\", "/") + "\"";
 }

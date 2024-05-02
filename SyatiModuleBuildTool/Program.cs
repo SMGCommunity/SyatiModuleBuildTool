@@ -114,7 +114,6 @@ internal class Program
         // If we made it here, we have a successful compile. Hooray!
         // I hope linking works...
 
-        //TODO: Module Symbol Support
         Console.WriteLine();
         Console.WriteLine("Linking...");
         string Kamek = $"{Path.Combine(SyatiFolderPath, "deps/Kamek/Kamek.exe")}";
@@ -122,7 +121,12 @@ internal class Program
         [
             Path.Combine(SyatiFolderPath, "symbols"),
         ];
-        string Symbols = $"-externals=\"{SymbolPaths[0]}/{args[0]}.txt\" ";
+        SymbolPaths.AddRange(ModuleUtility.CollectModuleSymbols(Modules));
+        string Symbols = "";
+        for (int y = 0; y < SymbolPaths.Count; y++)
+        {
+            Symbols += $"-externals=\"{SymbolPaths[y]}/{args[0]}.txt\" ";
+        }
         string MapFile = $"-output-map=\"{Path.Combine(args[3], $"CustomCode_{args[0]}.map")}\"";
         string Output = $"-output-kamek=\"{Path.Combine(args[3], $"CustomCode_{args[0]}.bin")}\"";
         int result = CompileUtility.LaunchProcess(Kamek, $"{string.Join(" ", AllObjectOutputs)} {Symbols} {Output} {MapFile}");
