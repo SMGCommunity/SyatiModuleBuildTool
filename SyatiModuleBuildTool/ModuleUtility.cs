@@ -296,9 +296,9 @@ public static class ModuleUtility
         CompileUtility.Compile(FinalFlags, IncludeString, CompilerTasks, AssemblerTasks, SyatiFolderPath);
 
         for (int i = 0; i < CompilerTasks.Count; i++)
-            OutputObjectFiles.Add(CompilerTasks[i].build);
+            OutputObjectFiles.Add("\"" + CompilerTasks[i].build + "\"");
         for (int i = 0; i < AssemblerTasks.Count; i++)
-            OutputObjectFiles.Add(AssemblerTasks[i].build);
+            OutputObjectFiles.Add("\"" + AssemblerTasks[i].build + "\"");
     }
 
 
@@ -306,9 +306,9 @@ public static class ModuleUtility
 
 
 
-    public static string CreateModuleCodeGenBuildPath(ModuleInfo MI) => Path.Combine(MI.FolderPath, "codebuild").Replace("\\", "/");
-    public static string CreateModuleIncludePath(ModuleInfo MI) => Path.Combine(MI.FolderPath, "include").Replace("\\", "/");
-    public static string CreateModuleSourcePath(ModuleInfo MI) => Path.Combine(MI.FolderPath, "source").Replace("\\", "/");
+    public static string CreateModuleCodeGenBuildPath(ModuleInfo MI) => "\"" + Path.Combine(MI.FolderPath, "codebuild").Replace("\\", "/") + "\"";
+    public static string CreateModuleIncludePath(ModuleInfo MI) => "\"" + Path.Combine(MI.FolderPath, "include").Replace("\\", "/") + "\"";
+    public static string CreateModuleSourcePath(ModuleInfo MI) => "\"" + Path.Combine(MI.FolderPath, "source").Replace("\\", "/") + "\"";
 
 
 
