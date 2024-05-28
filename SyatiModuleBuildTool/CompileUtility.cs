@@ -43,8 +43,13 @@ public static class CompileUtility
         string Assembler = $"{Path.Combine(SyatiFolderPath, "deps/CodeWarrior/mwasmeppc.exe")}";
 
 
+        #if _WINDOWS
         string CompileCommand = $"{string.Join(" ", CompilerFlags)} {Includes}";
         string AssembleCommand = $"{string.Join(" ", CompilerFlags)} {Includes}";
+        #else
+        string CompileCommand = $"wine {string.Join(" ", CompilerFlags)} {Includes}";
+        string AssembleCommand = $"wine {string.Join(" ", CompilerFlags)} {Includes}";
+        #endif
 
         for (int i = 0; i < CompilerTasks.Count; i++)
         {
