@@ -12,6 +12,8 @@ public class ModuleInfo
     public string Author { get; set; }
     [AllowNull]
     public string Description { get; set; }
+    [AllowNull]
+    public string APIId { get; set; }
 
     [AllowNull]
     public string[] ModuleDependancies { get; set; }

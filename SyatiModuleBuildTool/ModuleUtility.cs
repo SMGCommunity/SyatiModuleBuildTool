@@ -181,7 +181,7 @@ public static class ModuleUtility
                 if (ReferenceEquals(MI, OtherModules[x]))
                     continue;
 
-                if (OtherModules[x].Name.Equals(MI.ModuleDependancies[i]))
+                if (OtherModules[x].APIId is not null && OtherModules[x].APIId.Equals(MI.ModuleDependancies[i]))
                 {
                     Found = true;
                     break;
@@ -189,31 +189,31 @@ public static class ModuleUtility
             }
 
             if (!Found)
-                throw new MissingMemberException($"Dependancy \"{MI.ModuleDependancies[i]}\" could not be found");
+                throw new MissingMemberException($"API with ID \"{MI.ModuleDependancies[i]}\" could not be found");
         }
         return MI.ModuleDependancies;
     }
 
-    public static ModuleInfo GetDependancyByName(string name, List<ModuleInfo> OtherModules)
+    public static ModuleInfo GetModuleByAPIId(string ApiID, List<ModuleInfo> OtherModules)
     {
         for (int i = 0; i < OtherModules.Count; i++)
         {
-            if (OtherModules[i].Name.Equals(name))
+            if (OtherModules[i].APIId is not null && OtherModules[i].APIId.Equals(ApiID))
                 return OtherModules[i];
         }
-        throw new MissingMemberException($"Dependancy \"{name}\" could not be found");
+        throw new MissingMemberException($"API with ID \"{ApiID}\" could not be found");
     }
 
     public static string[] CreateModuleDependancyIncludes(ModuleInfo MI, List<ModuleInfo> OtherModules)
     {
-        string[] DepNames = GetModuleDependancies(MI, OtherModules);
-        if (DepNames.Length == 0)
-            return DepNames; // No point in making another empty array...
+        string[] APINames = GetModuleDependancies(MI, OtherModules);
+        if (APINames.Length == 0)
+            return APINames; // No point in making another empty array...
 
-        string[] Includes = new string[DepNames.Length];
-        for (int i = 0; i < DepNames.Length; i++)
+        string[] Includes = new string[APINames.Length];
+        for (int i = 0; i < APINames.Length; i++)
         {
-            ModuleInfo Dep = GetDependancyByName(DepNames[i], OtherModules);
+            ModuleInfo Dep = GetModuleByAPIId(APINames[i], OtherModules);
             Includes[i] = CreateModuleIncludePath(Dep);
         }
         return Includes;
