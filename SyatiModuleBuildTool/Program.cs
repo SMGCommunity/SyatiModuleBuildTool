@@ -133,9 +133,7 @@ internal class Program
 
         if (result != 0)
         {
-            //Error handling weary
-            Debugger.Break();
-            return;
+            throw new InvalidOperationException("Linker Failure");
         }
 
         Console.WriteLine("Complete!");
