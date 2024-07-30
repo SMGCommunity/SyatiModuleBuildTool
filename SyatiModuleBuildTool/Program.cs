@@ -109,7 +109,10 @@ internal class Program
             $"-D{args[0]}"
         ];
         Console.WriteLine();
-        ModuleUtility.CompileAllModules(Modules, Flags, IncludePaths, SyatiFolderPath, ref AllObjectOutputs);
+        if (args.Any(o => o.Equals("-u")))
+            ModuleUtility.CompileAllUnibuild(Modules, Flags, IncludePaths, SyatiFolderPath, args[3], ref AllObjectOutputs);
+        else
+            ModuleUtility.CompileAllModules(Modules, Flags, IncludePaths, SyatiFolderPath, ref AllObjectOutputs);
 
         // If we made it here, we have a successful compile. Hooray!
         // I hope linking works...
@@ -144,6 +147,9 @@ internal class Program
         Console.WriteLine(
             """
             SyatiModuleBuildTool.exe <REGION> <Path_To_Syati_Repo> <Path_To_Modules_Folder> <Path_To_Output_Folder>
+
+            Extra options:
+            -u      Enable UniBuild. UniBuild can shrink the final .bin file size at the potential cost of debuggability. Should only be used when you have a lot of modules. (10+)
             """);
     }
     static void Error(Exception ex)

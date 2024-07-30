@@ -303,6 +303,89 @@ public static class ModuleUtility
 
 
 
+    public static void CompileAllUnibuild(List<ModuleInfo> Modules, string[] Flags, string[] Includes, string SyatiFolderPath, string OutputFolderPath, ref List<string> OutputObjectFiles)
+    {
+        List<string> AllModuleFlags = [];
+        AllModuleFlags.AddRange(Flags);
+        AllModuleFlags.AddRange(CollectModuleFlags(Modules));
+
+        List<string> DependancyIncludes = [];
+        List<string> AllCompileIncludePaths = [];
+        DependancyIncludes.AddRange(Includes);
+
+        for (int i = 0; i < Modules.Count; i++)
+        {
+            AddDependancyIncludeIfNotExist(CreateModuleIncludePath(Modules[i]));
+            AddDependancyIncludeIfNotExist(CreateModuleCodeGenBuildPath(Modules[i]));
+            AddDependancyIncludesIfNotExist(CreateModuleDependancyIncludes(Modules[i], Utility.RemoveOneItem(Modules, i)));
+            AddDependancyIncludesIfNotExist(GetModuleExtensionIncludes(Modules[i]));
+
+
+            // Collect the Source/Build paths
+            List<string> SourcePaths =
+            [
+                Path.Combine(Modules[i].FolderPath, "source").Replace("\\", "/"),
+            ];
+            List<string> BuildPaths =
+            [
+                Path.Combine(Modules[i].FolderPath, "build").Replace("\\", "/"),
+            ];
+
+            for (int x = 0; x < SourcePaths.Count; x++)
+            {
+                string[] AllFiles = Directory.GetFiles(SourcePaths[x], "*.cpp", SearchOption.AllDirectories);
+                foreach (string File in AllFiles)
+                    AllCompileIncludePaths.Add(File);
+
+                AllFiles = Directory.GetFiles(SourcePaths[x], "*.s", SearchOption.AllDirectories);
+                foreach (string File in AllFiles)
+                {
+                    throw new NotImplementedException("Idk how to do this with ASM support");
+                }
+            }
+        }
+
+        string MasterCPP =
+            """
+            {0}
+            """;
+        string PathString = "";
+        for (int i = 0; i < AllCompileIncludePaths.Count; i++)
+        {
+            PathString += $"#include \"{AllCompileIncludePaths[i].Replace('\\', '/')}\""+Environment.NewLine;
+        }
+        MasterCPP = string.Format(MasterCPP, PathString);
+
+        string FinalCPPPath = Path.Combine(OutputFolderPath, "UniBuild.cpp");
+        File.WriteAllText(FinalCPPPath, MasterCPP);
+
+        List<(string source, string build)> CompilerTasks = [(FinalCPPPath, FinalCPPPath.Replace(".cpp", ".o"))];
+        List<(string source, string build)> AssemblerTasks = [];
+        string IncludeString = "-i " + string.Join(" -I- -i ", DependancyIncludes);
+        string FinalFlags = string.Join(" ", AllModuleFlags);
+        CompileUtility.Compile(FinalFlags, IncludeString, CompilerTasks, AssemblerTasks, SyatiFolderPath);
+
+        for (int i = 0; i < CompilerTasks.Count; i++)
+            OutputObjectFiles.Add("\"" + CompilerTasks[i].build + "\"");
+        for (int i = 0; i < AssemblerTasks.Count; i++)
+            OutputObjectFiles.Add("\"" + AssemblerTasks[i].build + "\"");
+
+
+        void AddDependancyIncludeIfNotExist(string path)
+        {
+            if (!DependancyIncludes.Contains(path))
+                DependancyIncludes.Add(path);
+        }
+
+        void AddDependancyIncludesIfNotExist(IList<string> data)
+        {
+            for (int i = 0; i < data.Count; i++)
+                AddDependancyIncludeIfNotExist(data[i]);
+        }
+    }
+
+
+
     public static string[] CollectModuleSymbols(List<ModuleInfo> Modules)
     {
         List<string> Paths = [];
