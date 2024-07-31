@@ -333,6 +333,9 @@ public static class ModuleUtility
 
             for (int x = 0; x < SourcePaths.Count; x++)
             {
+                if (!Directory.Exists(SourcePaths[x]))
+                    continue;
+
                 string[] AllFiles = Directory.GetFiles(SourcePaths[x], "*.cpp", SearchOption.AllDirectories);
                 foreach (string File in AllFiles)
                     AllCompileIncludePaths.Add(File);
