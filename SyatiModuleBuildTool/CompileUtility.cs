@@ -39,17 +39,16 @@ public static class CompileUtility
 
     public static void Compile(string Flags, string Includes, List<(string source, string build)> CompilerTasks, List<(string source, string build)> AssemblerTasks, string SyatiFolderPath)
     {
+        #if _WINDOWS
         string Compiler = $"{Path.Combine(SyatiFolderPath, "deps/CodeWarrior/mwcceppc.exe")}";
         string Assembler = $"{Path.Combine(SyatiFolderPath, "deps/CodeWarrior/mwasmeppc.exe")}";
-
-
-        #if _WINDOWS
+        #else
+        string Compiler = $"{Path.Combine(SyatiFolderPath, "deps/CodeWarrior/mwcceppc")}";
+        string Assembler = $"{Path.Combine(SyatiFolderPath, "deps/CodeWarrior/mwasmeppc")}";
+        #endif
         string CompileCommand = $"{string.Join(" ", CompilerFlags)} {Includes}";
         string AssembleCommand = $"{string.Join(" ", CompilerFlags)} {Includes}";
-        #else
-        string CompileCommand = $"wine {string.Join(" ", CompilerFlags)} {Includes}";
-        string AssembleCommand = $"wine {string.Join(" ", CompilerFlags)} {Includes}";
-        #endif
+        
 
         for (int i = 0; i < CompilerTasks.Count; i++)
         {
