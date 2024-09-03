@@ -116,7 +116,11 @@ internal class Program
 
         Console.WriteLine();
         Console.WriteLine("Linking...");
+        #if _WINDOWS
         string Kamek = $"{Path.Combine(SyatiFolderPath, "deps/Kamek/Kamek.exe")}";
+        #else 
+        string Kamek = $"{Path.Combine(SyatiFolderPath, "deps/Kamek/Kamek")}";
+        #endif
         List<string> SymbolPaths =
         [
             Path.Combine(SyatiFolderPath, "symbols"),
