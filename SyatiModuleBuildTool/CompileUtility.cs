@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace SyatiModuleBuildTool;
 
@@ -39,13 +40,14 @@ public static class CompileUtility
 
     public static void Compile(string Flags, string Includes, List<(string source, string build)> CompilerTasks, List<(string source, string build)> AssemblerTasks, string SyatiFolderPath)
     {
-        #if _WINDOWS
-        string Compiler = $"{Path.Combine(SyatiFolderPath, "deps/CodeWarrior/mwcceppc.exe")}";
-        string Assembler = $"{Path.Combine(SyatiFolderPath, "deps/CodeWarrior/mwasmeppc.exe")}";
-        #else
-        string Compiler = $"{Path.Combine(SyatiFolderPath, "deps/CodeWarrior/mwcceppc")}";
-        string Assembler = $"{Path.Combine(SyatiFolderPath, "deps/CodeWarrior/mwasmeppc")}";
-        #endif
+        string Compiler, Assembler;
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+            Compiler = $"{Path.Combine(SyatiFolderPath, "deps/CodeWarrior/mwcceppc.exe")}";
+            Assembler = $"{Path.Combine(SyatiFolderPath, "deps/CodeWarrior/mwasmeppc.exe")}";
+        } else {
+            Compiler = $"{Path.Combine(SyatiFolderPath, "deps/CodeWarrior/mwcceppc")}";
+            Assembler = $"{Path.Combine(SyatiFolderPath, "deps/CodeWarrior/mwasmeppc")}";
+        }
         string CompileCommand = $"{string.Join(" ", CompilerFlags)} {Includes}";
         string AssembleCommand = $"{string.Join(" ", CompilerFlags)} {Includes}";
         

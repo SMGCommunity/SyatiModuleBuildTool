@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace SyatiModuleBuildTool;
 
@@ -116,11 +117,12 @@ internal class Program
 
         Console.WriteLine();
         Console.WriteLine("Linking...");
-        #if _WINDOWS
-        string Kamek = $"{Path.Combine(SyatiFolderPath, "deps/Kamek/Kamek.exe")}";
-        #else 
-        string Kamek = $"{Path.Combine(SyatiFolderPath, "deps/Kamek/Kamek")}";
-        #endif
+        string Kamek;
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+            Kamek = $"{Path.Combine(SyatiFolderPath, "deps/Kamek/Kamek.exe")}";
+        } else {
+            Kamek = $"{Path.Combine(SyatiFolderPath, "deps/Kamek/Kamek")}";
+        }
         List<string> SymbolPaths =
         [
             Path.Combine(SyatiFolderPath, "symbols"),
