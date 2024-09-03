@@ -31,6 +31,12 @@ internal class Program
         string[] SymLinksInsideModules = Directory.GetFiles(ModuleFolderPath, "*.", SearchOption.TopDirectoryOnly); //Symlinks to module folders
         Console.WriteLine($"{DirectoriesInsideModules.Length + ShortcutsInsideModules.Length} found");
 
+        // This feature lets you ignore modules inside the modules folder. Suggested by Bavario & VTXG.
+        string[] ModuleIgnore = [];
+        string IgnoreFilePath = Path.Combine(ModuleFolderPath, ".moduleignore");
+        if (File.Exists(IgnoreFilePath))
+            ModuleIgnore = File.ReadAllLines(IgnoreFilePath);
+
         int LoadedModuleNum = 0;
         for (int i = 0; i < DirectoriesInsideModules.Length; i++)
         {
@@ -81,6 +87,14 @@ internal class Program
                     //Console.WriteLine($"Duplicate Module: \"{pth}\"");
                     return;
                 }
+            }
+
+            // Check for Ignores
+            string pthName = Path.GetFileName(pth);
+            if (ModuleIgnore.Contains(pthName))
+            {
+                Console.WriteLine($"{pthName} Ignored by .moduleignore");
+                return;
             }
 
             ModuleInfo? Info = ModuleInfo.Load(pth);
