@@ -394,7 +394,7 @@ public static class ModuleUtility
         List<string> Paths = [];
         foreach (ModuleInfo module in Modules)
         {
-            string path = CreateModuleSymbolPath(module);
+            string path = CreateModuleSymbolPath(module).Replace("\"","");
             if (Directory.Exists(path))
                 Paths.Add(path);
         }
