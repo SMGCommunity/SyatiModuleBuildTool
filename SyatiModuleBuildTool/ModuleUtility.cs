@@ -169,29 +169,33 @@ public static class ModuleUtility
 
     public static string[] GetModuleDependancies(ModuleInfo MI, List<ModuleInfo> OtherModules)
     {
-        if (MI.ModuleDependancies is null)
-            return [];
+        List<string> Deps = [];
 
-
-        for (int i = 0; i < MI.ModuleDependancies.Length; i++)
+        if (MI.ModuleDependancies is not null)
         {
-            bool Found = false;
-            for (int x = 0; x < OtherModules.Count; x++)
-            {
-                if (ReferenceEquals(MI, OtherModules[x]))
-                    continue;
-
-                if (OtherModules[x].APIId is not null && OtherModules[x].APIId.Equals(MI.ModuleDependancies[i]))
-                {
-                    Found = true;
-                    break;
-                }
-            }
-
-            if (!Found)
-                throw new MissingMemberException($"API with ID \"{MI.ModuleDependancies[i]}\" could not be found");
+            for (int i = 0; i < MI.ModuleDependancies.Length; i++)
+                _ = GetModuleByAPIId(MI.ModuleDependancies[i], OtherModules); //We just need to run this function, as it'll exception on it's own when no module is found
+            Deps.AddRange(MI.ModuleDependancies);
         }
-        return MI.ModuleDependancies;
+
+        // Optional APIs are... Optional... use Compiler Flags in your code!
+        if (MI.ModuleOptionalDependancies is not null)
+            for (int i = 0; i < MI.ModuleOptionalDependancies.Length; i++)
+                for (int x = 0; x < OtherModules.Count; x++)
+                {
+                    if (ReferenceEquals(MI, OtherModules[x]))
+                        continue;
+
+                    string p = MI.ModuleOptionalDependancies[i];
+                    if (OtherModules[x].APIId is not null && OtherModules[x].APIId.Equals(p))
+                    {
+                        if (!Deps.Contains(p))
+                            Deps.Add(p);
+                        break;
+                    }
+                }
+
+        return [.. Deps];
     }
 
     public static ModuleInfo GetModuleByAPIId(string ApiID, List<ModuleInfo> OtherModules)

@@ -18,6 +18,8 @@ public class ModuleInfo
     [AllowNull]
     public string[] ModuleDependancies { get; set; }
     [AllowNull]
+    public string[] ModuleOptionalDependancies { get; set; }
+    [AllowNull]
     public string[] SpecificSourcePaths { get; set; }
     [AllowNull]
     public string[] CompilerFlags { get; set; }
