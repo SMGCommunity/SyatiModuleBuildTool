@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 
 namespace SyatiModuleBuildTool;
 
@@ -21,6 +20,34 @@ internal class Program
 
         string SyatiFolderPath = args[1].Replace("\\", "/");
         string ModuleFolderPath = args[2].Replace("\\", "/");
+        string KamekPath, CompilerPath, AssemblerPath;
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            KamekPath = $"{Path.Combine(SyatiFolderPath, "deps/Kamek/Kamek.exe")}";
+            CompilerPath = $"{Path.Combine(SyatiFolderPath, "deps/CodeWarrior/mwcceppc.exe")}";
+            AssemblerPath = $"{Path.Combine(SyatiFolderPath, "deps/CodeWarrior/mwasmeppc.exe")}";
+        }
+        else
+        {
+            KamekPath = $"{Path.Combine(SyatiFolderPath, "deps/Kamek/Kamek")}";
+            CompilerPath = $"{Path.Combine(SyatiFolderPath, "deps/CodeWarrior/mwcceppc")}";
+            AssemblerPath = $"{Path.Combine(SyatiFolderPath, "deps/CodeWarrior/mwasmeppc")}";
+        }
+        if (!File.Exists(CompilerPath))
+        {
+            Error(new MissingMethodException($"Could not locate CodeWarrior C++ Compiler at \"{CompilerPath}\""));
+            return;
+        }
+        if (!File.Exists(AssemblerPath))
+        {
+            Error(new MissingMethodException($"Could not locate CodeWarrior PPC Assembler at \"{AssemblerPath}\""));
+            return;
+        }
+        if (!File.Exists(KamekPath))
+        {
+            Error(new MissingMethodException($"Could not locate Kamek Linker at \"{KamekPath}\""));
+            return;
+        }
 
 
         List<ModuleInfo> Modules = [];
@@ -138,12 +165,7 @@ internal class Program
 
         Console.WriteLine();
         Console.WriteLine("Linking...");
-        string Kamek;
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
-            Kamek = $"{Path.Combine(SyatiFolderPath, "deps/Kamek/Kamek.exe")}";
-        } else {
-            Kamek = $"{Path.Combine(SyatiFolderPath, "deps/Kamek/Kamek")}";
-        }
+
         List<string> SymbolPaths =
         [
             Path.Combine(SyatiFolderPath, "symbols"),
@@ -156,7 +178,7 @@ internal class Program
         }
         string MapFile = $"-output-map=\"{Path.Combine(args[3], $"CustomCode_{args[0]}.map")}\"";
         string Output = $"-output-kamek=\"{Path.Combine(args[3], $"CustomCode_{args[0]}.bin")}\"";
-        int result = CompileUtility.LaunchProcess(Kamek, $"{string.Join(" ", AllObjectOutputs)} {Symbols} {Output} {MapFile}");
+        int result = CompileUtility.LaunchProcess(KamekPath, $"{string.Join(" ", AllObjectOutputs)} {Symbols} {Output} {MapFile}");
 
         if (result != 0)
         {
