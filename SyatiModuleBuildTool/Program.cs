@@ -58,22 +58,26 @@ internal class Program
 
         for (int i = 0; i < SymLinksInsideModules.Length; i++)
         {
-            string t;
+            string[] SymLinks;
             try
             {
-                t = File.ReadAllText(SymLinksInsideModules[i]);
-                if (t.StartsWith('.'))
-                {
-                    string pt = Path.Combine(ModuleFolderPath, t);
-                    t = Path.GetFullPath(new Uri(pt).LocalPath);
-                }
+                SymLinks = File.ReadAllLines(SymLinksInsideModules[i]);
             }
             catch (Exception)
             {
                 continue;
             }
 
-            TryLoadModule(t);
+            foreach (var str in SymLinks)
+            {
+                string t = str;
+                if (t.StartsWith('.'))
+                {
+                    string pt = Path.Combine(ModuleFolderPath, t);
+                    t = Path.GetFullPath(new Uri(pt).LocalPath);
+                }
+                TryLoadModule(t);
+            }
         }
 
 
