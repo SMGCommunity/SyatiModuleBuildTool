@@ -155,7 +155,7 @@ internal class Program
             $"-D{args[0]}"
         ];
         Console.WriteLine();
-        if (args.Any(o => o.Equals("-u")))
+        if (args.Last().Equals("-u"))
             ModuleUtility.CompileAllUnibuild(Modules, Flags, IncludePaths, SyatiFolderPath, args[3], ref AllObjectOutputs);
         else
             ModuleUtility.CompileAllModules(Modules, Flags, IncludePaths, SyatiFolderPath, ref AllObjectOutputs);
@@ -185,6 +185,14 @@ internal class Program
             throw new InvalidOperationException("Linker Failure");
         }
 
+        if (args.Length > 4 && args[4] != "-u") { // Make sure the argument in the position of Path_To_Disc_Output_Folder isn't the unibuild flag
+            Console.WriteLine();
+            Console.WriteLine("Copying disc...");
+
+            DiscUtility.CopyAllFiles(Modules, args[4]);
+        }
+
+        Console.WriteLine();
         Console.WriteLine("Complete!");
     }
 
@@ -192,7 +200,7 @@ internal class Program
     {
         Console.WriteLine(
             """
-            SyatiModuleBuildTool.exe <REGION> <Path_To_Syati_Repo> <Path_To_Modules_Folder> <Path_To_Output_Folder>
+            SyatiModuleBuildTool.exe <REGION> <Path_To_Syati_Repo> <Path_To_Modules_Folder> <Path_To_Code_Output_Folder> <Path_To_Disc_Output_Folder>
 
             Extra options:
             -u      Enable UniBuild. UniBuild can shrink the final .bin file size at the potential cost of debuggability. Should only be used when you have a lot of modules. (10+)
