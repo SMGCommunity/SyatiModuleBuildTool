@@ -155,7 +155,7 @@ internal class Program
             $"-D{args[0]}"
         ];
         Console.WriteLine();
-        if (args.Last().Equals("-u"))
+        if (args.Any(s => s.Equals("-u")))
             ModuleUtility.CompileAllUnibuild(Modules, Flags, IncludePaths, SyatiFolderPath, args[3], ref AllObjectOutputs);
         else
             ModuleUtility.CompileAllModules(Modules, Flags, IncludePaths, SyatiFolderPath, ref AllObjectOutputs);
@@ -185,17 +185,37 @@ internal class Program
             throw new InvalidOperationException("Linker Failure");
         }
 
-        if (args.Length > 4 && args[4] != "-u") { // Make sure the argument in the position of Path_To_Disc_Output_Folder isn't the unibuild flag
-            Console.WriteLine();
-            Console.WriteLine("Copying disc...");
+        // if (args.Length > 4 && args[4] != "-u") { // Make sure the argument in the position of Path_To_Disc_Output_Folder isn't the unibuild flag
+        if (GetOptionalArgument(ref args, "-d", out var path)) {
+            if (path is not null) {
+                Console.WriteLine();
+                Console.WriteLine("Copying disc...");
 
-            DiscUtility.CopyAllFiles(Modules, args[4]);
+                DiscUtility.CopyAllFiles(Modules, path);
+            }
+            else {
+                Console.WriteLine("A path to copy disc files to was not provided, skipped copying.");
+            }
         }
 
         Console.WriteLine();
         Console.WriteLine("Complete!");
     }
+    static bool GetOptionalArgument(ref string[] args, string flag, out string? str) {
+        for (int i = 0; i < args.Length; i++) {
+            if (args[i] == flag) {
+                if (i + 1 < args.Length)
+                    str = args[i + 1];
+                else
+                    str = null;
 
+                return true;
+            }
+        }
+
+        str = null;
+        return false;
+    }
     static void Help()
     {
         Console.WriteLine(
@@ -203,7 +223,8 @@ internal class Program
             SyatiModuleBuildTool.exe <REGION> <Path_To_Syati_Repo> <Path_To_Modules_Folder> <Path_To_Code_Output_Folder> <Path_To_Disc_Output_Folder>
 
             Extra options:
-            -u      Enable UniBuild. UniBuild can shrink the final .bin file size at the potential cost of debuggability. Should only be used when you have a lot of modules. (10+)
+            -d <Path>  Copy module disc files. To use this option, replace <Path> with the path you want to copy the disc files to.
+            -u         Enable UniBuild. UniBuild can shrink the final .bin file size at the potential cost of debuggability. Should only be used when you have a lot of modules. (10+)
             """);
     }
     static void Error(Exception ex)
