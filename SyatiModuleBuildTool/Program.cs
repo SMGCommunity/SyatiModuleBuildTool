@@ -185,7 +185,6 @@ internal class Program
             throw new InvalidOperationException("Linker Failure");
         }
 
-        // if (args.Length > 4 && args[4] != "-u") { // Make sure the argument in the position of Path_To_Disc_Output_Folder isn't the unibuild flag
         if (GetOptionalArgument(ref args, "-d", out var path)) {
             if (path is not null) {
                 Console.WriteLine();
