@@ -58,6 +58,6 @@ jobs:
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create-release.outputs.upload_url }}
-          asset_path: SyatiModuleBuildTool.zip
+          asset_path: ./bin/Release/net8.0/SyatiModuleBuildTool.zip
           asset_name: SyatiModuleBuildTool.zip
           asset_content_type: application/zip
