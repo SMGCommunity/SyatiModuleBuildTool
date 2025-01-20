@@ -22,7 +22,7 @@ public static class DiscUtility {
 
             try {
                 if (Path.Exists(targetPath))
-                    Console.WriteLine($" - File will replace {targetPath}");
+                    Console.WriteLine($"{sourcePath} will replace {targetPath}");
 
                 var targetDirectory = Path.GetDirectoryName(targetPath);
                 if (targetDirectory is not null)
@@ -31,7 +31,7 @@ public static class DiscUtility {
                 File.Copy(sourcePath, targetPath, true);
             }
             catch (Exception e) {
-                Console.WriteLine($"Error while copying {discFolder}: {e.Message}");
+                Console.WriteLine($"Error while copying \"{discFolder}\": {e.Message}");
             }
         }
     }
