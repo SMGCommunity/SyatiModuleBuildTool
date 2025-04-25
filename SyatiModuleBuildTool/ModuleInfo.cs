@@ -69,6 +69,11 @@ public class ModuleInfo
         public string CodeGenDestination { get; set; }
 
         [AllowNull]
+        public string[] CodeGenTemplateSources { get; set; }
+        [AllowNull]
+        public string[] CodeGenTemplateDestinations { get; set; }
+
+        [AllowNull]
         public string[] Variables { get; set; }
         [AllowNull]
         public CodeGenEntry[] CodeGenData { get; set; }
