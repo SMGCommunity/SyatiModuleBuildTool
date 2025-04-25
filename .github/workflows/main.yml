@@ -1,18 +1,11 @@
 name: Build and Create Release
 
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
-
 permissions:
   contents: write
-  issues: write
-  pull-requests: write
-  deployments: write
+
+on:
+  push:
+    branches: [ main ]
 
 jobs:
   build:
@@ -20,44 +13,34 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4.1.1
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4.0.0
         with:
           dotnet-version: '8.0'
 
       - name: Restore dependencies
         run: dotnet restore
 
-      - name: Build the project
-        run: dotnet build --configuration Release
+      - name: Build
+        run: |
+          dotnet publish -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true
+          dotnet publish -c Release -r linux-x64 --self-contained true /p:PublishSingleFile=true
+          dotnet publish -c Release -r osx-x64 --self-contained true /p:PublishSingleFile=true
 
-      - name: Run tests
-        run: dotnet test
+      - name: Rename binaries
+        run: |
+          mv SyatiModuleBuildTool/bin/Release/net8.0/linux-x64/publish/SyatiModuleBuildTool SyatiModuleBuildTool/bin/Release/net8.0/linux-x64/publish/SyatiModuleBuildTool-linux
+          mv SyatiModuleBuildTool/bin/Release/net8.0/osx-x64/publish/SyatiModuleBuildTool SyatiModuleBuildTool/bin/Release/net8.0/osx-x64/publish/SyatiModuleBuildTool-macos
 
-  create-release:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Create a Release
-        id: create-release
-        uses: actions/create-release@v1
+      - uses: "marvinpinto/action-automatic-releases@latest"
         with:
-          tag_name: release-${{ github.sha }}
-          release_name: Release ${{ github.sha }}
-          draft: false
-          prerelease: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload Release Assets
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.create-release.outputs.upload_url }}
-          asset_path: ./bin/Release/net8.0/SyatiModuleBuildTool.zip
-          asset_name: SyatiModuleBuildTool.zip
-          asset_content_type: application/zip
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: auto
+          title: "Auto"
+          prerelease: false
+          files: |
+            SyatiModuleBuildTool/bin/Release/net8.0/win-x64/publish/SyatiModuleBuildTool.exe
+            SyatiModuleBuildTool/bin/Release/net8.0/linux-x64/publish/SyatiModuleBuildTool-linux
+            SyatiModuleBuildTool/bin/Release/net8.0/osx-x64/publish/SyatiModuleBuildTool-macos
