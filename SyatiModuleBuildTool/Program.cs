@@ -151,9 +151,13 @@ internal class Program
         string[] IncludePaths = [
             "\"" + Path.Combine(SyatiFolderPath, "include") + "\""
         ];
-        string[] Flags = [
-            $"-D{args[0]}"
-        ];
+        List<string> FlagSet = [ $"-D{args[0]}" ];
+        for (int i = 3; i < args.Length; i++)
+        {
+            if (args[i].StartsWith("-DUSR_"))
+                FlagSet.Add(args[i]);
+        }
+        string[] Flags = [.. FlagSet];
         Console.WriteLine();
         if (args.Any(o => o.Equals("-u")))
             ModuleUtility.CompileAllUnibuild(Modules, Flags, IncludePaths, SyatiFolderPath, args[3], ref AllObjectOutputs);
