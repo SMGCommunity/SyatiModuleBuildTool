@@ -432,14 +432,14 @@ public static class ModuleUtility
             string[] AllFiles = Directory.GetFiles(SourcePaths[i], "*.cpp", SearchOption.AllDirectories);
             foreach (string File in AllFiles)
             {
-                string BuildPath = File.Replace(SourcePaths[i], "build").Replace(".cpp", ".o");
+                string BuildPath = File.Replace("source", "build").Replace(".cpp", ".o");
                 CompilerTasks.Add((File, BuildPath));
             }
 
             AllFiles = Directory.GetFiles(SourcePaths[i], "*.s", SearchOption.AllDirectories);
             foreach (string File in AllFiles)
             {
-                string BuildPath = File.Replace(SourcePaths[i], "build").Replace(".s", ".o");
+                string BuildPath = File.Replace("source", "build").Replace(".s", ".o");
                 AssemblerTasks.Add((File, BuildPath));
             }
         }
