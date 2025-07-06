@@ -481,6 +481,7 @@ public static class ModuleUtility
             List<string> SourcePaths =
             [
                 Path.Combine(Modules[i].FolderPath, "source").Replace("\\", "/"),
+                Path.Combine(Modules[i].FolderPath, "codebuild").Replace("\\", "/"),
             ];
             List<string> BuildPaths =
             [
