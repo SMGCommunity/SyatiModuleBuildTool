@@ -159,7 +159,7 @@ internal class Program
         }
         string[] Flags = [.. FlagSet];
         Console.WriteLine();
-        if (args.Any(o => o.Equals("-u")))
+        if (args.Any(s => s.Equals("-u")))
             ModuleUtility.CompileAllUnibuild(Modules, Flags, IncludePaths, SyatiFolderPath, args[3], ref AllObjectOutputs);
         else
             ModuleUtility.CompileAllModules(Modules, Flags, IncludePaths, SyatiFolderPath, ref AllObjectOutputs);
@@ -189,17 +189,40 @@ internal class Program
             throw new InvalidOperationException("Linker Failure");
         }
 
+        if (GetOptionalArgument(ref args, "-d", out var path) && path is not null) {
+            Console.WriteLine();
+            Console.WriteLine("Copying disc...");
+
+            DiscUtility.CopyAllFiles(Modules, path);
+        }
+
+        Console.WriteLine();
         Console.WriteLine("Complete!");
     }
+    static bool GetOptionalArgument(ref string[] args, string flag, out string? str) {
+        for (int i = 4; i < args.Length; i++) {
+            if (args[i] == flag) {
+                if (i + 1 < args.Length)
+                    str = args[i + 1];
+                else
+                    str = null;
 
+                return true;
+            }
+        }
+
+        str = null;
+        return false;
+    }
     static void Help()
     {
         Console.WriteLine(
             """
-            SyatiModuleBuildTool.exe <REGION> <Path_To_Syati_Repo> <Path_To_Modules_Folder> <Path_To_Output_Folder>
+            SyatiModuleBuildTool.exe <REGION> <Path_To_Syati_Repo> <Path_To_Modules_Folder> <Path_To_Code_Output_Folder>
 
             Extra options:
-            -u      Enable UniBuild. UniBuild can shrink the final .bin file size at the potential cost of debuggability. Should only be used when you have a lot of modules. (10+)
+            -d <Path>  Copy module disc files. To use this option, replace <Path> with the path you want to copy the disc files to.
+            -u         Enable UniBuild. UniBuild can shrink the final .bin file size at the potential cost of debuggability. Should only be used when you have a lot of modules. (10+)
             """);
     }
     static void Error(Exception ex)
