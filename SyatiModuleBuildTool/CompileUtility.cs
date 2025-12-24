@@ -58,7 +58,7 @@ public static class CompileUtility
             string dir = new FileInfo(CompilerTasks[i].build).DirectoryName ?? throw new Exception();
             if (!Directory.Exists(dir))
                 Directory.CreateDirectory(dir);
-            if (LaunchProcess(Compiler, $"{CompileCommand} {Flags} \"{CompilerTasks[i].source}\" -o \"{CompilerTasks[i].build}\"") != 0)
+            if (Utility.LaunchProcess(Compiler, $"{CompileCommand} {Flags} \"{CompilerTasks[i].source}\" -o \"{CompilerTasks[i].build}\"") != 0)
             {
                 throw new Exception($"Failed to compile \"{CompilerTasks[i].source}\"");
             }
@@ -69,53 +69,10 @@ public static class CompileUtility
             string dir = new FileInfo(AssemblerTasks[i].build).DirectoryName ?? throw new Exception();
             if (!Directory.Exists(dir))
                 Directory.CreateDirectory(dir);
-            if (LaunchProcess(Assembler, $"{AssembleCommand} {Flags} \"{AssemblerTasks[i].source}\" -o \"{AssemblerTasks[i].build}\"") != 0)
+            if (Utility.LaunchProcess(Assembler, $"{AssembleCommand} {Flags} \"{AssemblerTasks[i].source}\" -o \"{AssemblerTasks[i].build}\"") != 0)
             {
                 throw new Exception($"Failed to assemble \"{AssemblerTasks[i].source}\"");
             }
         }
-    }
-
-
-    public static int LaunchProcess(string Program, string Args)
-    {
-        Process process = new()
-        {
-            EnableRaisingEvents = true
-        };
-        process.OutputDataReceived += new DataReceivedEventHandler(Process_OutputDataReceived);
-        process.ErrorDataReceived += new DataReceivedEventHandler(Process_ErrorDataReceived);
-        process.Exited += new EventHandler(Process_Exited);
-
-        process.StartInfo.FileName = Program;
-        process.StartInfo.Arguments = Args;
-        process.StartInfo.UseShellExecute = false;
-        process.StartInfo.RedirectStandardError = true;
-        process.StartInfo.RedirectStandardOutput = true;
-
-        process.Start();
-        process.BeginErrorReadLine();
-        process.BeginOutputReadLine();
-
-        //below line is optional if we want a blocking call
-        process.WaitForExit();
-        return process.ExitCode;
-    }
-
-    static void Process_Exited(object? sender, EventArgs e)
-    {
-        //Console.WriteLine(string.Format("process exited with code {0}\n", process.ExitCode.ToString()));
-    }
-
-    static void Process_ErrorDataReceived(object sender, DataReceivedEventArgs e)
-    {
-        if ((e.Data?.Length ?? 0) > 0)
-            Console.WriteLine(e.Data);
-    }
-
-    static void Process_OutputDataReceived(object sender, DataReceivedEventArgs e)
-    {
-        if ((e.Data?.Length ?? 0) > 0)
-            Console.WriteLine(e.Data);
     }
 }

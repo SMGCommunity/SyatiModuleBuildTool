@@ -18,20 +18,20 @@ internal class Program
             return;
         }
 
-        string SyatiFolderPath = args[1].Replace("\\", "/");
+        string HeaderRepositoryPath = args[1].Replace("\\", "/");
         string ModuleFolderPath = args[2].Replace("\\", "/");
-        string KamekPath, CompilerPath, AssemblerPath;
+        string LinkerPath, CompilerPath, AssemblerPath;
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            KamekPath = $"{Path.Combine(SyatiFolderPath, "deps/Kamek/Kamek.exe")}";
-            CompilerPath = $"{Path.Combine(SyatiFolderPath, "deps/CodeWarrior/mwcceppc.exe")}";
-            AssemblerPath = $"{Path.Combine(SyatiFolderPath, "deps/CodeWarrior/mwasmeppc.exe")}";
+            LinkerPath = $"{Path.Combine(HeaderRepositoryPath, "deps/Kamek/Kamek.exe")}";
+            CompilerPath = $"{Path.Combine(HeaderRepositoryPath, "deps/CodeWarrior/mwcceppc.exe")}";
+            AssemblerPath = $"{Path.Combine(HeaderRepositoryPath, "deps/CodeWarrior/mwasmeppc.exe")}";
         }
         else
         {
-            KamekPath = $"{Path.Combine(SyatiFolderPath, "deps/Kamek/Kamek")}";
-            CompilerPath = $"{Path.Combine(SyatiFolderPath, "deps/CodeWarrior/mwcceppc")}";
-            AssemblerPath = $"{Path.Combine(SyatiFolderPath, "deps/CodeWarrior/mwasmeppc")}";
+            LinkerPath = $"{Path.Combine(HeaderRepositoryPath, "deps/Kamek/Kamek")}";
+            CompilerPath = $"{Path.Combine(HeaderRepositoryPath, "deps/CodeWarrior/mwcceppc")}";
+            AssemblerPath = $"{Path.Combine(HeaderRepositoryPath, "deps/CodeWarrior/mwasmeppc")}";
         }
         if (!File.Exists(CompilerPath))
         {
@@ -43,9 +43,9 @@ internal class Program
             Error(new MissingMethodException($"Could not locate CodeWarrior PPC Assembler at \"{AssemblerPath}\""));
             return;
         }
-        if (!File.Exists(KamekPath))
+        if (!File.Exists(LinkerPath))
         {
-            Error(new MissingMethodException($"Could not locate Kamek Linker at \"{KamekPath}\""));
+            Error(new MissingMethodException($"Could not locate Kamek Linker at \"{LinkerPath}\""));
             return;
         }
 
@@ -73,10 +73,10 @@ internal class Program
 
         for (int i = 0; i < ShortcutsInsideModules.Length; i++)
         {
-            string Target = Utility.GetShortcutTarget(ShortcutsInsideModules[i]);
-            if (!File.GetAttributes(Target).HasFlag(FileAttributes.Directory))
+            string? Target = Utility.GetShortcutTarget(ShortcutsInsideModules[i]);
+            if (Target is null || !File.GetAttributes(Target).HasFlag(FileAttributes.Directory))
             {
-                Console.WriteLine($"Failed to load module: \"{Target}\"");
+                Console.WriteLine($"Failed to load module: \"{Target ?? ShortcutsInsideModules[i]}\"");
                 continue;
             }
 
@@ -149,7 +149,7 @@ internal class Program
 
         List<string> AllObjectOutputs = [];
         string[] IncludePaths = [
-            "\"" + Path.Combine(SyatiFolderPath, "include") + "\""
+            "\"" + Path.Combine(HeaderRepositoryPath, "include") + "\""
         ];
         List<string> FlagSet = [ $"-D{args[0]}" ];
         for (int i = 3; i < args.Length; i++)
@@ -160,9 +160,9 @@ internal class Program
         string[] Flags = [.. FlagSet];
         Console.WriteLine();
         if (args.Any(o => o.Equals("-u")))
-            ModuleUtility.CompileAllUnibuild(Modules, Flags, IncludePaths, SyatiFolderPath, args[3], ref AllObjectOutputs);
+            ModuleUtility.CompileAllUnibuild(Modules, Flags, IncludePaths, HeaderRepositoryPath, args[3], ref AllObjectOutputs);
         else
-            ModuleUtility.CompileAllModules(Modules, Flags, IncludePaths, SyatiFolderPath, ref AllObjectOutputs);
+            ModuleUtility.CompileAllModules(Modules, Flags, IncludePaths, HeaderRepositoryPath, ref AllObjectOutputs);
 
         // If we made it here, we have a successful compile. Hooray!
         // I hope linking works...
@@ -172,7 +172,7 @@ internal class Program
 
         List<string> SymbolPaths =
         [
-            Path.Combine(SyatiFolderPath, "symbols"),
+            Path.Combine(HeaderRepositoryPath, "symbols"),
         ];
         SymbolPaths.AddRange(ModuleUtility.CollectModuleSymbols(Modules));
         string Symbols = "";
@@ -182,7 +182,7 @@ internal class Program
         }
         string MapFile = $"-output-map=\"{Path.Combine(args[3], $"CustomCode_{args[0]}.map")}\"";
         string Output = $"-output-kamek=\"{Path.Combine(args[3], $"CustomCode_{args[0]}.bin")}\"";
-        int result = CompileUtility.LaunchProcess(KamekPath, $"{string.Join(" ", AllObjectOutputs)} {Symbols} {Output} {MapFile}");
+        int result = Utility.LaunchProcess(LinkerPath, $"{string.Join(" ", AllObjectOutputs)} {Symbols} {Output} {MapFile}");
 
         if (result != 0)
         {
@@ -196,10 +196,10 @@ internal class Program
     {
         Console.WriteLine(
             """
-            SyatiModuleBuildTool.exe <REGION> <Path_To_Syati_Repo> <Path_To_Modules_Folder> <Path_To_Output_Folder>
+            SyatiModuleBuildTool.exe <REGION> <Path_To_Header_Repo> <Path_To_Modules_Folder> <Path_To_Output_Folder>
 
             Extra options:
-            -u      Enable UniBuild. UniBuild can shrink the final .bin file size at the potential cost of debuggability. Should only be used when you have a lot of modules. (10+)
+            -u      Enable UniBuild. UniBuild can shrink the final .bin file size at the potential cost of debuggability. Should only be used when you have a lot of modules. (roughly 10 or more)
             """);
     }
     static void Error(Exception ex)

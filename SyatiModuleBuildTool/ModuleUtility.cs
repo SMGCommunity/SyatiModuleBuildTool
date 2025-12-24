@@ -370,7 +370,7 @@ public static class ModuleUtility
             if (Path.Exists(cb.Replace("\"", "")))
                 Includes.Add(cb);
         }
-        return Includes.ToArray();
+        return [.. Includes];
     }
 
 

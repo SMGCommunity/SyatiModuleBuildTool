@@ -1,15 +1,15 @@
-﻿namespace SyatiModuleBuildTool;
+﻿using System.Diagnostics;
+
+namespace SyatiModuleBuildTool;
 
 public static class Utility
 {
-    public static string GetShortcutTarget(string file)
+    public static string? GetShortcutTarget(string file)
     {
         try
         {
             if (!Path.GetExtension(file).Equals(".lnk", StringComparison.OrdinalIgnoreCase))
-            {
                 throw new Exception("Supplied file must be a .LNK file");
-            }
 
             FileStream fileStream = File.Open(file, FileMode.Open, FileAccess.Read);
             using BinaryReader fileReader = new(fileStream);
@@ -50,7 +50,7 @@ public static class Utility
         }
         catch
         {
-            return "";
+            return null;
         }
     }
 
@@ -58,9 +58,7 @@ public static class Utility
     {
         int pos = text.IndexOf(search);
         if (pos < 0)
-        {
             return text;
-        }
         return string.Concat(text.AsSpan(0, pos), replace, text.AsSpan(pos + search.Length));
     }
 
@@ -77,6 +75,52 @@ public static class Utility
         // Copy element after the index.
         list.CopyTo(index + 1, result, index, listCount - 1 - index);
 
-        return new List<T>(result);
+        return [.. result];
+    }
+
+
+
+    public static int LaunchProcess(string Program, string Args)
+    {
+        ProcessStartInfo PSI = new(Program, Args)
+        {
+            UseShellExecute = false,
+            RedirectStandardError = true,
+            RedirectStandardOutput = true,
+        };
+
+        Process process = new()
+        {
+            StartInfo = PSI,
+            EnableRaisingEvents = true,
+        };
+        process.OutputDataReceived += new DataReceivedEventHandler(Process_OutputDataReceived);
+        process.ErrorDataReceived += new DataReceivedEventHandler(Process_ErrorDataReceived);
+        process.Exited += new EventHandler(Process_Exited);
+
+        process.Start();
+        process.BeginErrorReadLine();
+        process.BeginOutputReadLine();
+
+        //below line is optional if we want a blocking call
+        process.WaitForExit();
+        return process.ExitCode;
+    }
+
+    static void Process_Exited(object? sender, EventArgs e)
+    {
+        //Console.WriteLine(string.Format("process exited with code {0}\n", process.ExitCode.ToString()));
+    }
+
+    static void Process_ErrorDataReceived(object sender, DataReceivedEventArgs e)
+    {
+        if ((e.Data?.Length ?? 0) > 0)
+            Console.WriteLine(e.Data);
+    }
+
+    static void Process_OutputDataReceived(object sender, DataReceivedEventArgs e)
+    {
+        if ((e.Data?.Length ?? 0) > 0)
+            Console.WriteLine(e.Data);
     }
 }
