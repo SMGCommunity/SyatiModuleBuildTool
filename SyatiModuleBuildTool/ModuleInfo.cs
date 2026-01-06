@@ -31,22 +31,34 @@ public class ModuleInfo
     /// <summary>
     /// This property allows defining what games/regions/versions of a game that this module works with.<para/>
     /// Format: [GAMEID]-VER<para/>
-    /// Example: RMGE01-0 (SMG1 US Wii All Versions), SB4E01-0 (SMG2 US Wii All Versions), R49E01-0 (DKJB US Wii All Versions), GYBE01-0 (DKJB US GameCube All Versions), SMNE01-1 (NSMBW US Wii Revision 1)
+    /// Example: RMGE01 (SMG1 US Wii All Versions), SB4E01 (SMG2 US Wii All Versions), R49E01 (DKJB US Wii All Versions), GYBE01 (DKJB US GameCube All Versions), SMNE01-0 (NSMBW US Wii Revision 0)
     /// </summary>
-    /// <remarks>The revision numbers are to be decided by community authorities, but 0 will always mean ALL revisions. No revision is the same as ALL revisions</remarks>
+    /// <remarks>The revision numbers are to be decided by community authorities, but no revision is the same as ALL revisions</remarks>
     [AllowNull]
-    public string[] SupportedGames { get; set; } // Will be added in 2026
+    public string[] SupportedGames { get; set; }
 
     /// <summary>
     /// This property indicates which API modules are REQUIRED for this module to compile.
     /// </summary>
     [AllowNull]
-    public string[] ModuleDependancies { get; set; } // This will be renamed in 2026
+    [Obsolete("Replaced by RequiredAPIs")]
+    public string[] ModuleDependancies { get; set; } // This will be removed in the future
     /// <summary>
     /// This property indicates which API modules are OPTIONAL for this module to compile.
     /// </summary>
     [AllowNull]
-    public string[] ModuleOptionalDependancies { get; set; } // This will be renamed in 2026
+    [Obsolete("Replaced by OptionalAPIs")]
+    public string[] ModuleOptionalDependancies { get; set; } // This will be removed in the future
+    /// <summary>
+    /// This property indicates which API modules are REQUIRED for this module to compile.
+    /// </summary>
+    [AllowNull]
+    public string[] RequiredAPIs { get; set; }
+    /// <summary>
+    /// This property indicates which API modules are OPTIONAL for this module to compile.
+    /// </summary>
+    [AllowNull]
+    public string[] OptionalAPIs { get; set; }
     /// <summary>
     /// Not currently used
     /// </summary>

@@ -6,8 +6,8 @@ namespace SyatiModuleBuildTool;
 public static class CompileUtility
 {
     //TODO: Something to consider would be to allow modules to define regions
-    private static readonly string[] REGIONS = ["PAL", "USA", "JPN", "TWN", "KOR"];
-    public static bool ValidateRegion(string Region) => REGIONS.Contains(Region);
+    //private static readonly string[] REGIONS = ["PAL", "USA", "JPN", "TWN", "KOR"];
+    //public static bool ValidateRegion(string Region) => REGIONS.Contains(Region);
 
     //TODO: It would probably be a good idea to let the modules define these compiler flags...
     static readonly string[] CompilerFlags =

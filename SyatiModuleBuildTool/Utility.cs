@@ -78,6 +78,12 @@ public static class Utility
         return [.. result];
     }
 
+    /// <summary>
+    /// Replace '\' with '/'
+    /// </summary>
+    /// <param name="s">The string to replace</param>
+    /// <returns></returns>
+    public static string PathSanitize(this string s) => s.Replace('\\','/');
 
 
     public static int LaunchProcess(string Program, string Args)

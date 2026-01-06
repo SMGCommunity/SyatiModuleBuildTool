@@ -12,14 +12,48 @@ internal class Program
             return;
         }
 
-        if (!CompileUtility.ValidateRegion(args[0]))
+        #region Parse Build Target and Region and Version
+        if (args[0].Length < 4)
         {
-            Error(new ArgumentException($"Invalid region {args[0]}", nameof(args)));
+            Error(new IndexOutOfRangeException($"The provided build target \"{args[0]}\" is not valid. (Too short)"));
             return;
         }
 
-        string HeaderRepositoryPath = args[1].Replace("\\", "/");
-        string ModuleFolderPath = args[2].Replace("\\", "/");
+        string BuildTarget = args[0].ToUpper();
+        char RegionTarget = ' ';
+        int VersionTarget = -1;
+
+        string[] split = BuildTarget.Split('-', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (split.Length > 1)
+        {
+            if (!int.TryParse(split[1], out VersionTarget))
+            {
+                Error(new InvalidDataException($"Failed to parse build target \"{BuildTarget}\""));
+                return;
+            }
+            BuildTarget = split[0];
+        }
+        int lastdash;
+        if ((lastdash = BuildTarget.LastIndexOf('-')) >= 0)
+            BuildTarget = BuildTarget[..^lastdash];
+        if (BuildTarget.Length == 4)
+        {
+            RegionTarget = BuildTarget[^1];
+            BuildTarget = BuildTarget[..3];
+        }
+        if (!((char[])['E', 'P', 'J', 'K', 'W']).Contains(RegionTarget))
+        {
+            Error(new InvalidDataException($"Invalid Region \'{RegionTarget}\'"));
+            return;
+        }
+        #endregion
+
+        string HeaderRepositoryPath = args[1].PathSanitize();
+        string ModuleFolderPath = args[2].PathSanitize();
+
+        // TODO: Make these... not hardcoded...
+        //       Idk how, but at the very least have like a config or something for these...
+        #region Check for Compiler, Assembler, and Linker
         string LinkerPath, CompilerPath, AssemblerPath;
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
@@ -48,16 +82,19 @@ internal class Program
             Error(new MissingMethodException($"Could not locate Kamek Linker at \"{LinkerPath}\""));
             return;
         }
+        #endregion
 
 
+        #region Collect Modules for compiling
         List<ModuleInfo> Modules = [];
+        int LoadedModuleNum = 0;
 
-        //Find all modules
+        // Find all modules, including ones from shortcuts and symlinks
         Console.Write("Loading Modules...");
         string[] DirectoriesInsideModules = Directory.GetDirectories(ModuleFolderPath, "*", SearchOption.TopDirectoryOnly);
         string[] ShortcutsInsideModules = Directory.GetFiles(ModuleFolderPath, "*.lnk", SearchOption.TopDirectoryOnly); //Shortcuts to module folders
         string[] SymLinksInsideModules = Directory.GetFiles(ModuleFolderPath, "*.", SearchOption.TopDirectoryOnly); //Symlinks to module folders
-        Console.WriteLine($"{DirectoriesInsideModules.Length + ShortcutsInsideModules.Length} found");
+        Console.WriteLine($"{DirectoriesInsideModules.Length + ShortcutsInsideModules.Length + SymLinksInsideModules.Length} found");
 
         // This feature lets you ignore modules inside the modules folder. Suggested by Bavario & VTXG.
         string[] ModuleIgnore = [];
@@ -65,11 +102,9 @@ internal class Program
         if (File.Exists(IgnoreFilePath))
             ModuleIgnore = File.ReadAllLines(IgnoreFilePath);
 
-        int LoadedModuleNum = 0;
+        // Load the modules
         for (int i = 0; i < DirectoriesInsideModules.Length; i++)
-        {
             TryLoadModule(DirectoriesInsideModules[i]);
-        }
 
         for (int i = 0; i < ShortcutsInsideModules.Length; i++)
         {
@@ -111,7 +146,7 @@ internal class Program
 
         void TryLoadModule(string ModulePath)
         {
-            string pth = ModulePath.Replace("\\", "/");
+            string pth = ModulePath.PathSanitize();
             for (int x = 0; x < Modules.Count; x++)
             {
                 if (Modules[x].FolderPath.Equals(pth)) //Duplicate
@@ -135,75 +170,185 @@ internal class Program
                 Console.WriteLine($"Failed to load module: \"{pth}\"");
                 return;
             }
+
+            if (Info.SupportedGames is null)
+                Console.WriteLine("!! WARNING !! ^^^ does not have SupportedGames defined. This will not be supported in the future!");
+            else
+            {
+                foreach (string sg in Info.SupportedGames)
+                {
+                    if (!sg.Equals(BuildTarget) && // Supports all regions of the build target [Example: SB4]
+                        !sg.Equals(BuildTarget + RegionTarget) && // Supports the specific region [Example: SB4E]
+                        !sg.Equals(BuildTarget + '-' + VersionTarget.ToString()) && // Supports all regions of the specific revision [Example: SB4-0]
+                        !sg.Equals(BuildTarget + RegionTarget + '-' + VersionTarget.ToString()) // Supports the specific region and revision [Example: SB4E-0]
+                        )
+                        continue;
+                    goto LoadModule; // Rare goto moment
+                }
+                Console.WriteLine($"\t^^^ Module doesn't support {args[0]} and will be ignored.");
+                return;
+            }
+        LoadModule:
+
+            if (Info.ModuleDependancies is not null || Info.ModuleOptionalDependancies is not null)
+            {
+                Console.WriteLine("!! WARNING !! ModuleDependancies and ModuleOptionalDependancies are OBSOLETE, replaced with RequiredAPIs and OptionalAPIs respectively.");
+            }
+
             Modules.Add(Info);
             LoadedModuleNum++;
         }
-
+        #endregion
 
 
         Console.WriteLine($"{LoadedModuleNum} modules loaded!");
 
+        // Verify that all the needed Module APIs are present
+        ModuleUtility.VerifyAllModuleAPIUsage(Modules);
 
-        ModuleUtility.VerifyDependancies(Modules);
+        // Perform CodeGen code generation
         ModuleUtility.PerformAllModuleCodeGen(Modules);
 
-        List<string> AllObjectOutputs = [];
+        // Gather the include paths that apply to all modules.
         string[] IncludePaths = [
             "\"" + Path.Combine(HeaderRepositoryPath, "include") + "\""
         ];
-        List<string> FlagSet = [ $"-D{args[0]}" ];
-        for (int i = 3; i < args.Length; i++)
+
+
+        // Gather the compiler flags, including user flags
+        List<string> FlagSet = [$"-D{BuildTarget}", $"-D{BuildTarget}{RegionTarget}"];
+        if (VersionTarget >= 0)
+            FlagSet.Add($"-DREV_{VersionTarget}");
+
+        // WARNING: This will be going away eventually!!!
+        switch (RegionTarget)
+        {
+            case 'E':
+                FlagSet.Add($"-DUSA");
+                break;
+            case 'P':
+                FlagSet.Add($"-DPAL");
+                break;
+            case 'J':
+                FlagSet.Add($"-DJPN");
+                break;
+            case 'K':
+                FlagSet.Add($"-DKOR");
+                break;
+            case 'W':
+                FlagSet.Add($"-DTWN");
+                break;
+            default:
+                break; // ???
+        }
+
+
+        for (int i = 4; i < args.Length; i++)
         {
             if (args[i].StartsWith("-DUSR_"))
                 FlagSet.Add(args[i]);
         }
-        string[] Flags = [.. FlagSet];
         Console.WriteLine();
+
+
+        // Actually do the compile tasks
+        List<string> AllObjectOutputs = [];
+        string[] Flags = [.. FlagSet];
         if (args.Any(o => o.Equals("-u")))
-            ModuleUtility.CompileAllUnibuild(Modules, Flags, IncludePaths, HeaderRepositoryPath, args[3], ref AllObjectOutputs);
+            ModuleUtility.CompileAllUnibuild(Modules, Flags, IncludePaths, HeaderRepositoryPath, args[3].PathSanitize(), ref AllObjectOutputs);
         else
             ModuleUtility.CompileAllModules(Modules, Flags, IncludePaths, HeaderRepositoryPath, ref AllObjectOutputs);
+
 
         // If we made it here, we have a successful compile. Hooray!
         // I hope linking works...
 
         Console.WriteLine();
-        Console.WriteLine("Linking...");
 
+
+        string FinalRegionRevString = $"{BuildTarget}{RegionTarget}";
+        if (VersionTarget >= 0)
+            FinalRegionRevString += $"_REV{VersionTarget}";
         List<string> SymbolPaths =
         [
-            Path.Combine(HeaderRepositoryPath, "symbols"),
+            Path.Combine(HeaderRepositoryPath, "symbols").PathSanitize(),
+            .. ModuleUtility.CollectModuleSymbols(Modules)
         ];
-        SymbolPaths.AddRange(ModuleUtility.CollectModuleSymbols(Modules));
-        string Symbols = "";
+        List<string> Externals = [];
         for (int y = 0; y < SymbolPaths.Count; y++)
         {
-            Symbols += $"-externals=\"{SymbolPaths[y]}/{args[0]}.txt\" ";
+            string path = $"{SymbolPaths[y]}/{FinalRegionRevString}.txt"; // Symbols for the specific game/region/revision
+            if (File.Exists(path))
+                Externals.Add($"-externals=\"{path}\"");
+
+            path = $"{SymbolPaths[y]}/{BuildTarget}{RegionTarget}.txt"; // Symbols for the specific gmae/region (all revisions)
+            if (File.Exists(path))
+                Externals.Add($"-externals=\"{path}\"");
+
+            path = $"{SymbolPaths[y]}/{BuildTarget}.txt"; // Symbols for the specific game (all regions, all revisions)
+            if (File.Exists(path))
+                Externals.Add($"-externals=\"{path}\"");
+
+            // WARNING: This will be going away eventually!!!
+            switch (RegionTarget)
+            {
+                case 'E':
+                    path = $"{SymbolPaths[y]}/USA.txt";
+                    if (File.Exists(path))
+                        Externals.Add($"-externals=\"{path}\"");
+                    break;
+                case 'P':
+                    path = $"{SymbolPaths[y]}/PAL.txt";
+                    if (File.Exists(path))
+                        Externals.Add($"-externals=\"{path}\"");
+                    break;
+                case 'J':
+                    path = $"{SymbolPaths[y]}/JPN.txt";
+                    if (File.Exists(path))
+                        Externals.Add($"-externals=\"{path}\"");
+                    break;
+                case 'K':
+                    path = $"{SymbolPaths[y]}/KOR.txt";
+                    if (File.Exists(path))
+                        Externals.Add($"-externals=\"{path}\"");
+                    break;
+                case 'W':
+                    path = $"{SymbolPaths[y]}/TWN.txt";
+                    if (File.Exists(path))
+                        Externals.Add($"-externals=\"{path}\"");
+                    break;
+                default:
+                    break; // ???
+            }
         }
-        string MapFile = $"-output-map=\"{Path.Combine(args[3], $"CustomCode_{args[0]}.map")}\"";
-        string Output = $"-output-kamek=\"{Path.Combine(args[3], $"CustomCode_{args[0]}.bin")}\"";
-        int result = Utility.LaunchProcess(LinkerPath, $"{string.Join(" ", AllObjectOutputs)} {Symbols} {Output} {MapFile}");
+        string MapFile = $"-output-map=\"{Path.Combine(args[3], $"CustomCode_{FinalRegionRevString}.map").PathSanitize()}\"";
+        string Output = $"-output-kamek=\"{Path.Combine(args[3], $"CustomCode_{FinalRegionRevString}.bin").PathSanitize()}\"";
+        string LinkerCommand = $"{string.Join(" ", AllObjectOutputs)} {string.Join(" ", Externals)} {Output} {MapFile}";
+        int result = Utility.LaunchProcess(LinkerPath, LinkerCommand);
 
         if (result != 0)
         {
-            throw new InvalidOperationException("Linker Failure");
+            Error(new InvalidOperationException("Linker Failure"));
+            return;
+        }
+
+        if (args.Any(o => o.Equals("-c")))
+        {
+            string[] lines = ModuleUtility.CollectAllModuleAuthors(Modules);
+            string path = Path.Combine(args[3], $"ModuleAuthors_{FinalRegionRevString}.txt").PathSanitize();
+            File.WriteAllLines(path, lines);
         }
 
         Console.WriteLine("Complete!");
     }
 
-    static void Help()
-    {
-        Console.WriteLine(
+    static void Help() => Console.WriteLine(
             """
-            SyatiModuleBuildTool.exe <REGION> <Path_To_Header_Repo> <Path_To_Modules_Folder> <Path_To_Output_Folder>
+            SyatiModuleBuildTool.exe <BUILD_TARGET> <HEADER_REPOSITORY> <MODULES_FOLDER> <OUTPUT_FOLDER>
 
             Extra options:
             -u      Enable UniBuild. UniBuild can shrink the final .bin file size at the potential cost of debuggability. Should only be used when you have a lot of modules. (roughly 10 or more)
+            -c      Outputs a text file with modules and their authors.
             """);
-    }
-    static void Error(Exception ex)
-    {
-        throw ex;
-    }
+    static void Error(Exception ex) => throw ex;
 }

@@ -1,12 +1,58 @@
-﻿using System.Linq;
-using System.Reflection;
-using System.Text.Json;
+﻿using System.Text.Json;
 using static SyatiModuleBuildTool.ModuleInfo;
 
 namespace SyatiModuleBuildTool;
 
 public static class ModuleUtility
 {
+    #region Module folder path shortcut functions
+    /// <summary>
+    /// [ModuleFolder]/codebuildexport
+    /// </summary>
+    /// <param name="MI">The module to get the path of</param>
+    /// <returns>[ModuleFolder]/codebuildexport</returns>
+    public static string CreateModuleCodeGenBuildExportPath(ModuleInfo MI) => "\"" + Path.Combine(MI.FolderPath, "codebuildexport").PathSanitize() + "\"";
+    /// <summary>
+    /// [ModuleFolder]/codebuild
+    /// </summary>
+    /// <param name="MI">The module to get the path of</param>
+    /// <returns>[ModuleFolder]/codebuild</returns>
+    public static string CreateModuleCodeGenBuildPath(ModuleInfo MI) => "\"" + Path.Combine(MI.FolderPath, "codebuild").PathSanitize() + "\"";
+    /// <summary>
+    /// [ModuleFolder]/include
+    /// </summary>
+    /// <param name="MI">The module to get the path of</param>
+    /// <returns>[ModuleFolder]/include</returns>
+    public static string CreateModuleIncludePath(ModuleInfo MI) => "\"" + Path.Combine(MI.FolderPath, "include").PathSanitize() + "\"";
+    /// <summary>
+    /// [ModuleFolder]/source
+    /// </summary>
+    /// <param name="MI">The module to get the path of</param>
+    /// <returns>[ModuleFolder]/source</returns>
+    public static string CreateModuleSourcePath(ModuleInfo MI) => "\"" + Path.Combine(MI.FolderPath, "source").PathSanitize() + "\"";
+    /// <summary>
+    /// [ModuleFolder]/symbols
+    /// </summary>
+    /// <param name="MI">The module to get the path of</param>
+    /// <returns>[ModuleFolder]/symbols</returns>
+    public static string CreateModuleSymbolPath(ModuleInfo MI) => "\"" + Path.Combine(MI.FolderPath, "symbols").PathSanitize() + "\"";
+    #endregion
+
+    #region Module data collection functions
+    public static string[] CollectAllModuleAuthors(List<ModuleInfo> Modules)
+    {
+        List<string> Authors = [];
+        foreach (ModuleInfo module in Modules)
+            if (!module.Author.StartsWith("["))
+                Authors.Add($"{module.Name} : {module.Author}");
+        return [.. Authors];
+    }
+
+    /// <summary>
+    /// Collects all the compiler flags from each module for use with the compiler
+    /// </summary>
+    /// <param name="Modules">A list of all modules that are currently present</param>
+    /// <returns>An array of all the compiler flags</returns>
     public static string[] CollectModuleFlags(List<ModuleInfo> Modules)
     {
         List<string> flags = [];
@@ -16,13 +62,178 @@ public static class ModuleUtility
         return [.. flags];
     }
 
+    /// <summary>
+    /// Gets all the module specific symbol maps
+    /// </summary>
+    /// <param name="Modules">A list of all modules that are currently present</param>
+    /// <returns>An array of paths to module symbol folders</returns>
+    public static string[] CollectModuleSymbols(List<ModuleInfo> Modules)
+    {
+        List<string> Paths = [];
+        foreach (ModuleInfo module in Modules)
+        {
+            string path = CreateModuleSymbolPath(module).Replace("\"","");
+            if (Directory.Exists(path))
+                Paths.Add(path);
+        }
+        return [.. Paths];
+    }
 
+    /// <summary>
+    /// Gets the include paths of all extensions in a given module
+    /// </summary>
+    /// <param name="MI">The module to get the API includes for</param>
+    /// <returns>an array of paths to the includes of the extensions</returns>
+    public static string[] CollectModuleExtensionIncludes(ModuleInfo MI)
+    {
+        if (MI.ModuleExtensionDefinition is null)
+            return [];
+        List<string> All = [];
+        foreach (ModuleExtensionInfo item in MI.ModuleExtensionDefinition)
+            All.AddRange(item.IncludePaths);
+        return [.. All];
+    }
+    #endregion
+
+    #region Module API functions
+    /// <summary>
+    /// Verifies that all the required API modules are present
+    /// </summary>
+    /// <param name="Modules">A list of all modules that are currently present</param>
+    public static void VerifyAllModuleAPIUsage(List<ModuleInfo> Modules)
+    {
+        foreach (ModuleInfo module in Modules)
+        {
+            _ = GetModuleAPIUsage(module, Modules);
+        }
+    }
+
+    /// <summary>
+    /// Returns an array of all the API modules that a given module requires. Includes any optional modules that are present as well.
+    /// </summary>
+    /// <param name="MI">The module to get the API Usage of</param>
+    /// <param name="OtherModules">A list of all modules that are currently present</param>
+    /// <returns>An array of API Module IDs that the provided module uses</returns>
+    public static string[] GetModuleAPIUsage(ModuleInfo MI, List<ModuleInfo> OtherModules)
+    {
+        List<string> Deps = [];
+
+        #region Old - Will be removed later
+        // Handle the required APIs
+        if (MI.ModuleDependancies is not null)
+        {
+            for (int i = 0; i < MI.ModuleDependancies.Length; i++)
+                _ = GetModuleByAPIId(MI.ModuleDependancies[i], OtherModules); //We just need to run this function, as it'll exception on it's own when no module is found
+            Deps.AddRange(MI.ModuleDependancies);
+        }
+
+        // Optional APIs are... Optional... use Compiler Flags in your code!
+        if (MI.ModuleOptionalDependancies is not null)
+            for (int i = 0; i < MI.ModuleOptionalDependancies.Length; i++)
+                for (int x = 0; x < OtherModules.Count; x++)
+                {
+                    if (ReferenceEquals(MI, OtherModules[x]))
+                        continue;
+
+                    string p = MI.ModuleOptionalDependancies[i];
+                    if (OtherModules[x].APIId is not null && OtherModules[x].APIId.Equals(p))
+                    {
+                        if (!Deps.Contains(p))
+                            Deps.Add(p);
+                        break;
+                    }
+                }
+        #endregion
+
+        // Handle the required APIs
+        if (MI.RequiredAPIs is not null)
+        {
+            for (int i = 0; i < MI.RequiredAPIs.Length; i++)
+                _ = GetModuleByAPIId(MI.RequiredAPIs[i], OtherModules); //We just need to run this function, as it'll exception on it's own when no module is found
+            Deps.AddRange(MI.RequiredAPIs);
+        }
+
+        // Optional APIs are... Optional... use Compiler Flags in your code!
+        if (MI.OptionalAPIs is not null)
+            for (int i = 0; i < MI.OptionalAPIs.Length; i++)
+                for (int x = 0; x < OtherModules.Count; x++)
+                {
+                    if (ReferenceEquals(MI, OtherModules[x]))
+                        continue;
+
+                    string p = MI.OptionalAPIs[i];
+                    if (OtherModules[x].APIId is not null && OtherModules[x].APIId.Equals(p))
+                    {
+                        if (!Deps.Contains(p))
+                            Deps.Add(p);
+                        break;
+                    }
+                }
+
+        return [.. Deps];
+    }
+
+    /// <summary>
+    /// Gets the <see cref="ModuleInfo"/> of the module that has the requested <paramref name="API_ID"/>
+    /// </summary>
+    /// <param name="API_ID">The API to locate the <see cref="ModuleInfo"/> of</param>
+    /// <param name="OtherModules">A list of all modules that are currently present</param>
+    /// <returns>The <see cref="ModuleInfo"/> of the module with the provided API ID</returns>
+    /// <exception cref="MissingMemberException">If there is no module with the requested API ID</exception>
+    public static ModuleInfo GetModuleByAPIId(string API_ID, List<ModuleInfo> OtherModules)
+    {
+        for (int i = 0; i < OtherModules.Count; i++)
+            if (OtherModules[i].APIId is not null && OtherModules[i].APIId.Equals(API_ID))
+                return OtherModules[i];
+
+        throw new MissingMemberException($"API with ID \"{API_ID}\" could not be found");
+    }
+
+    /// <summary>
+    /// Creates a list of paths to API module include files for the compiler to use.
+    /// </summary>
+    /// <param name="MI">The module to get the API includes for</param>
+    /// <param name="OtherModules">A list of all modules that are currently present</param>
+    /// <returns>A list of paths to API module include files for the compiler to use</returns>
+    public static string[] CreateAPIModuleIncludes(ModuleInfo MI, List<ModuleInfo> OtherModules)
+    {
+        string[] APINames = GetModuleAPIUsage(MI, OtherModules);
+        if (APINames.Length == 0)
+            return []; // No APIs? No problem!
+
+        List<string> Includes = [];
+        for (int i = 0; i < APINames.Length; i++)
+        {
+            ModuleInfo Dep = GetModuleByAPIId(APINames[i], OtherModules);
+            string inc = CreateModuleIncludePath(Dep);
+            if (Path.Exists(inc.Replace("\"", "")))
+                Includes.Add(inc);
+            string cb = CreateModuleCodeGenBuildExportPath(Dep);
+            if (Path.Exists(cb.Replace("\"", "")))
+                Includes.Add(cb);
+        }
+        return [.. Includes];
+    }
+    #endregion
+
+    #region Module CodeGen functions
+    /// <summary>
+    /// Performs CodeGen for all the provided modules
+    /// </summary>
+    /// <param name="Modules">A list of all modules that are currently present</param>
     public static void PerformAllModuleCodeGen(List<ModuleInfo> Modules)
     {
         for (int i = 0; i < Modules.Count; i++)
             PerformModuleCodeGen(Modules[i], Modules);
     }
 
+    /// <summary>
+    /// WriteMe
+    /// </summary>
+    /// <param name="MI"></param>
+    /// <param name="OtherModules"></param>
+    /// <exception cref="Exception"></exception>
+    /// <exception cref="IndexOutOfRangeException"></exception>
     public static void PerformModuleCodeGen(ModuleInfo MI, List<ModuleInfo> OtherModules)
     {
         if (MI.ModuleExtensionDefinition is null)
@@ -302,110 +513,47 @@ public static class ModuleUtility
             return 0;
         }
     }
+    #endregion
 
-
-    public static void VerifyDependancies(List<ModuleInfo> Modules)
-    {
-        foreach (ModuleInfo module in Modules)
-        {
-            _ = GetModuleDependancies(module, Modules);
-        }
-    }
-
-    public static string[] GetModuleDependancies(ModuleInfo MI, List<ModuleInfo> OtherModules)
-    {
-        List<string> Deps = [];
-
-        if (MI.ModuleDependancies is not null)
-        {
-            for (int i = 0; i < MI.ModuleDependancies.Length; i++)
-                _ = GetModuleByAPIId(MI.ModuleDependancies[i], OtherModules); //We just need to run this function, as it'll exception on it's own when no module is found
-            Deps.AddRange(MI.ModuleDependancies);
-        }
-
-        // Optional APIs are... Optional... use Compiler Flags in your code!
-        if (MI.ModuleOptionalDependancies is not null)
-            for (int i = 0; i < MI.ModuleOptionalDependancies.Length; i++)
-                for (int x = 0; x < OtherModules.Count; x++)
-                {
-                    if (ReferenceEquals(MI, OtherModules[x]))
-                        continue;
-
-                    string p = MI.ModuleOptionalDependancies[i];
-                    if (OtherModules[x].APIId is not null && OtherModules[x].APIId.Equals(p))
-                    {
-                        if (!Deps.Contains(p))
-                            Deps.Add(p);
-                        break;
-                    }
-                }
-
-        return [.. Deps];
-    }
-
-    public static ModuleInfo GetModuleByAPIId(string ApiID, List<ModuleInfo> OtherModules)
-    {
-        for (int i = 0; i < OtherModules.Count; i++)
-        {
-            if (OtherModules[i].APIId is not null && OtherModules[i].APIId.Equals(ApiID))
-                return OtherModules[i];
-        }
-        throw new MissingMemberException($"API with ID \"{ApiID}\" could not be found");
-    }
-
-    public static string[] CreateModuleDependancyIncludes(ModuleInfo MI, List<ModuleInfo> OtherModules)
-    {
-        string[] APINames = GetModuleDependancies(MI, OtherModules);
-        if (APINames.Length == 0)
-            return APINames; // No point in making another empty array...
-
-        List<string> Includes = [];
-        for (int i = 0; i < APINames.Length; i++)
-        {
-            ModuleInfo Dep = GetModuleByAPIId(APINames[i], OtherModules);
-            string inc = CreateModuleIncludePath(Dep);
-            if (Path.Exists(inc.Replace("\"", "")))
-                Includes.Add(inc);
-            string cb = CreateModuleCodeGenBuildExportPath(Dep);
-            if (Path.Exists(cb.Replace("\"", "")))
-                Includes.Add(cb);
-        }
-        return [.. Includes];
-    }
-
-
-    public static string[] GetModuleExtensionIncludes(ModuleInfo MI)
-    {
-        if (MI.ModuleExtensionDefinition is null)
-            return [];
-        List<string> All = [];
-        foreach (ModuleExtensionInfo item in MI.ModuleExtensionDefinition)
-        {
-            All.AddRange(item.IncludePaths);
-        }
-        return [.. All];
-    }
-
+    #region Module compilation functions
+    /// <summary>
+    /// WriteMe
+    /// </summary>
+    /// <param name="Modules"></param>
+    /// <param name="Flags"></param>
+    /// <param name="Includes"></param>
+    /// <param name="SyatiFolderPath"></param>
+    /// <param name="OutputObjectFiles"></param>
     public static void CompileAllModules(List<ModuleInfo> Modules, string[] Flags, string[] Includes, string SyatiFolderPath, ref List<string> OutputObjectFiles)
     {
-        List<string> AllModuleFlags = [];
-        AllModuleFlags.AddRange(Flags);
-        AllModuleFlags.AddRange(CollectModuleFlags(Modules));
+        string[] AllModuleFlags = [
+            .. Flags,
+            .. CollectModuleFlags(Modules)
+            ];
 
         for (int i = 0; i < Modules.Count; i++)
         {
-            List<string> DependancyIncludes = [];
-            DependancyIncludes.AddRange(Includes);
-            DependancyIncludes.Add(CreateModuleIncludePath(Modules[i]));
-            DependancyIncludes.Add(CreateModuleCodeGenBuildPath(Modules[i]));
-            DependancyIncludes.Add(CreateModuleCodeGenBuildExportPath(Modules[i]));
-            DependancyIncludes.AddRange(CreateModuleDependancyIncludes(Modules[i], Utility.RemoveOneItem(Modules, i)));
-            DependancyIncludes.AddRange(GetModuleExtensionIncludes(Modules[i]));
+            string[] DependancyIncludes = [
+                .. Includes,
+                CreateModuleIncludePath(Modules[i]),
+                CreateModuleCodeGenBuildPath(Modules[i]),
+                CreateModuleCodeGenBuildExportPath(Modules[i]),
+                .. CreateAPIModuleIncludes(Modules[i], Utility.RemoveOneItem(Modules, i)),
+                .. CollectModuleExtensionIncludes(Modules[i])
+                ];
 
-            CompileModule(Modules[i], [.. AllModuleFlags], [.. DependancyIncludes], SyatiFolderPath, ref OutputObjectFiles);
+            CompileModule(Modules[i], AllModuleFlags, DependancyIncludes, SyatiFolderPath, ref OutputObjectFiles);
         }
     }
 
+    /// <summary>
+    /// WriteMe
+    /// </summary>
+    /// <param name="MI"></param>
+    /// <param name="Flags"></param>
+    /// <param name="Includes"></param>
+    /// <param name="SyatiFolderPath"></param>
+    /// <param name="OutputObjectFiles"></param>
     public static void CompileModule(ModuleInfo MI, string[] Flags, string[] Includes, string SyatiFolderPath, ref List<string> OutputObjectFiles)
     {
         string IncludeString = "-i " + string.Join(" -I- -i ", Includes);
@@ -413,12 +561,12 @@ public static class ModuleUtility
         // Collect the Source/Build paths
         List<string> SourcePaths =
         [
-            Path.Combine(MI.FolderPath, "source").Replace("\\", "/"),
-            Path.Combine(MI.FolderPath, "codebuild").Replace("\\", "/"),
+            Path.Combine(MI.FolderPath, "source").PathSanitize(),
+            Path.Combine(MI.FolderPath, "codebuild").PathSanitize(),
         ];
         List<string> BuildPaths =
         [
-            Path.Combine(MI.FolderPath, "build").Replace("\\", "/"),
+            Path.Combine(MI.FolderPath, "build").PathSanitize(),
         ];
 
         List<(string source, string build)> CompilerTasks = [];
@@ -457,36 +605,44 @@ public static class ModuleUtility
             OutputObjectFiles.Add("\"" + AssemblerTasks[i].build + "\"");
     }
 
-
-
+    /// <summary>
+    /// WriteMe
+    /// </summary>
+    /// <param name="Modules"></param>
+    /// <param name="Flags"></param>
+    /// <param name="Includes"></param>
+    /// <param name="SyatiFolderPath"></param>
+    /// <param name="OutputFolderPath"></param>
+    /// <param name="OutputObjectFiles"></param>
+    /// <exception cref="NotImplementedException"></exception>
     public static void CompileAllUnibuild(List<ModuleInfo> Modules, string[] Flags, string[] Includes, string SyatiFolderPath, string OutputFolderPath, ref List<string> OutputObjectFiles)
     {
-        List<string> AllModuleFlags = [];
-        AllModuleFlags.AddRange(Flags);
-        AllModuleFlags.AddRange(CollectModuleFlags(Modules));
+        string[] AllModuleFlags = [
+            .. Flags,
+            .. CollectModuleFlags(Modules)
+            ];
 
-        List<string> DependancyIncludes = [];
+        List<string> DependancyIncludes = [.. Includes];
         List<string> AllCompileIncludePaths = [];
-        DependancyIncludes.AddRange(Includes);
 
         for (int i = 0; i < Modules.Count; i++)
         {
             AddDependancyIncludeIfNotExist(CreateModuleIncludePath(Modules[i]));
             AddDependancyIncludeIfNotExist(CreateModuleCodeGenBuildPath(Modules[i]));
-            AddDependancyIncludesIfNotExist(CreateModuleDependancyIncludes(Modules[i], Utility.RemoveOneItem(Modules, i)));
-            AddDependancyIncludesIfNotExist(GetModuleExtensionIncludes(Modules[i]));
+            AddDependancyIncludesIfNotExist(CreateAPIModuleIncludes(Modules[i], Utility.RemoveOneItem(Modules, i)));
+            AddDependancyIncludesIfNotExist(CollectModuleExtensionIncludes(Modules[i]));
 
 
             // Collect the Source/Build paths
             List<string> SourcePaths =
             [
-                Path.Combine(Modules[i].FolderPath, "source").Replace("\\", "/"),
-                Path.Combine(Modules[i].FolderPath, "codebuild").Replace("\\", "/"),
+                Path.Combine(Modules[i].FolderPath, "source").PathSanitize(),
+                Path.Combine(Modules[i].FolderPath, "codebuild").PathSanitize(),
             ];
-            List<string> BuildPaths =
-            [
-                Path.Combine(Modules[i].FolderPath, "build").Replace("\\", "/"),
-            ];
+            //List<string> BuildPaths =
+            //[
+            //    Path.Combine(Modules[i].FolderPath, "build").PathSanitize(),
+            //];
 
             for (int x = 0; x < SourcePaths.Count; x++)
             {
@@ -511,12 +667,10 @@ public static class ModuleUtility
             """;
         string PathString = "";
         for (int i = 0; i < AllCompileIncludePaths.Count; i++)
-        {
-            PathString += $"#include \"{AllCompileIncludePaths[i].Replace('\\', '/')}\""+Environment.NewLine;
-        }
+            PathString += $"#include \"{AllCompileIncludePaths[i].PathSanitize()}\"" + Environment.NewLine;
         MasterCPP = string.Format(MasterCPP, PathString);
 
-        string FinalCPPPath = Path.Combine(OutputFolderPath, "UniBuild.cpp");
+        string FinalCPPPath = Path.Combine(OutputFolderPath, "UniBuild.cpp").PathSanitize();
         File.WriteAllText(FinalCPPPath, MasterCPP);
 
         List<(string source, string build)> CompilerTasks = [(FinalCPPPath, FinalCPPPath.Replace(".cpp", ".o"))];
@@ -543,24 +697,5 @@ public static class ModuleUtility
                 AddDependancyIncludeIfNotExist(data[i]);
         }
     }
-
-
-
-    public static string[] CollectModuleSymbols(List<ModuleInfo> Modules)
-    {
-        List<string> Paths = [];
-        foreach (ModuleInfo module in Modules)
-        {
-            string path = CreateModuleSymbolPath(module).Replace("\"","");
-            if (Directory.Exists(path))
-                Paths.Add(path);
-        }
-        return [.. Paths];
-    }
-
-    public static string CreateModuleCodeGenBuildExportPath(ModuleInfo MI) => "\"" + Path.Combine(MI.FolderPath, "codebuildexport").Replace("\\", "/") + "\"";
-    public static string CreateModuleCodeGenBuildPath(ModuleInfo MI) => "\"" + Path.Combine(MI.FolderPath, "codebuild").Replace("\\", "/") + "\"";
-    public static string CreateModuleIncludePath(ModuleInfo MI) => "\"" + Path.Combine(MI.FolderPath, "include").Replace("\\", "/") + "\"";
-    public static string CreateModuleSourcePath(ModuleInfo MI) => "\"" + Path.Combine(MI.FolderPath, "source").Replace("\\", "/") + "\"";
-    public static string CreateModuleSymbolPath(ModuleInfo MI) => "\"" + Path.Combine(MI.FolderPath, "symbols").Replace("\\", "/") + "\"";
+    #endregion
 }
