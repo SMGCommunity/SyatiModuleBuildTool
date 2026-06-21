@@ -220,6 +220,12 @@ internal class Program
         if (VersionTarget >= 0)
             FlagSet.Add($"-DREV_{VersionTarget}");
 
+        if (args.Any(o => o.Equals("-d")))
+        {
+            Console.WriteLine("====> Compiling with DEBUG enabled");
+            FlagSet.Add("-DDEBUG");
+        }
+
         // WARNING: This will be going away eventually!!!
         switch (RegionTarget)
         {
