@@ -171,30 +171,27 @@ internal class Program
                 return;
             }
 
+
             if (Info.SupportedGames is null)
-                Console.WriteLine("!! WARNING !! ^^^ does not have SupportedGames defined. This will not be supported in the future!");
-            else
             {
-                foreach (string sg in Info.SupportedGames)
-                {
-                    if (!sg.Equals(BuildTarget) && // Supports all regions of the build target [Example: SB4]
-                        !sg.Equals(BuildTarget + RegionTarget) && // Supports the specific region [Example: SB4E]
-                        !sg.Equals(BuildTarget + '-' + VersionTarget.ToString()) && // Supports all regions of the specific revision [Example: SB4-0]
-                        !sg.Equals(BuildTarget + RegionTarget + '-' + VersionTarget.ToString()) // Supports the specific region and revision [Example: SB4E-0]
-                        )
-                        continue;
-                    goto LoadModule; // Rare goto moment
-                }
-                Console.WriteLine($"\t^^^ Module doesn't support {args[0]} and will be ignored.");
+                Console.WriteLine($"\t!! WARNING !! ^^^ Module doesn't define any supported games and will be ignored.");
                 return;
             }
-        LoadModule:
 
-            if (Info.ModuleDependancies is not null || Info.ModuleOptionalDependancies is not null)
+            foreach (string sg in Info.SupportedGames)
             {
-                Console.WriteLine("!! WARNING !! ModuleDependancies and ModuleOptionalDependancies are OBSOLETE, replaced with RequiredAPIs and OptionalAPIs respectively.");
+                if (!sg.Equals(BuildTarget) && // Supports all regions of the build target [Example: SB4]
+                    !sg.Equals(BuildTarget + RegionTarget) && // Supports the specific region [Example: SB4E]
+                    !sg.Equals(BuildTarget + '-' + VersionTarget.ToString()) && // Supports all regions of the specific revision [Example: SB4-0]
+                    !sg.Equals(BuildTarget + RegionTarget + '-' + VersionTarget.ToString()) // Supports the specific region and revision [Example: SB4E-0]
+                    )
+                    continue;
+                goto LoadModule; // Rare goto moment
             }
+            Console.WriteLine($"\t!! WARNING !! ^^^ Module doesn't support {args[0]} and will be ignored.");
+            return;
 
+        LoadModule:
             Modules.Add(Info);
             LoadedModuleNum++;
         }

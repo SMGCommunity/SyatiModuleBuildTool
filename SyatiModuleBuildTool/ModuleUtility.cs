@@ -43,7 +43,7 @@ public static class ModuleUtility
     {
         List<string> Authors = [];
         foreach (ModuleInfo module in Modules)
-            if (!module.Author.StartsWith("["))
+            if (!module.Author.StartsWith('['))
                 Authors.Add($"{module.Name} : {module.Author}");
         return [.. Authors];
     }
@@ -117,33 +117,6 @@ public static class ModuleUtility
     public static string[] GetModuleAPIUsage(ModuleInfo MI, List<ModuleInfo> OtherModules)
     {
         List<string> Deps = [];
-
-        #region Old - Will be removed later
-        // Handle the required APIs
-        if (MI.ModuleDependancies is not null)
-        {
-            for (int i = 0; i < MI.ModuleDependancies.Length; i++)
-                _ = GetModuleByAPIId(MI.ModuleDependancies[i], OtherModules); //We just need to run this function, as it'll exception on it's own when no module is found
-            Deps.AddRange(MI.ModuleDependancies);
-        }
-
-        // Optional APIs are... Optional... use Compiler Flags in your code!
-        if (MI.ModuleOptionalDependancies is not null)
-            for (int i = 0; i < MI.ModuleOptionalDependancies.Length; i++)
-                for (int x = 0; x < OtherModules.Count; x++)
-                {
-                    if (ReferenceEquals(MI, OtherModules[x]))
-                        continue;
-
-                    string p = MI.ModuleOptionalDependancies[i];
-                    if (OtherModules[x].APIId is not null && OtherModules[x].APIId.Equals(p))
-                    {
-                        if (!Deps.Contains(p))
-                            Deps.Add(p);
-                        break;
-                    }
-                }
-        #endregion
 
         // Handle the required APIs
         if (MI.RequiredAPIs is not null)

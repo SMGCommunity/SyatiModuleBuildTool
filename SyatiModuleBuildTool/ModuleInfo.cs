@@ -41,18 +41,6 @@ public class ModuleInfo
     /// This property indicates which API modules are REQUIRED for this module to compile.
     /// </summary>
     [AllowNull]
-    [Obsolete("Replaced by RequiredAPIs")]
-    public string[] ModuleDependancies { get; set; } // This will be removed in the future
-    /// <summary>
-    /// This property indicates which API modules are OPTIONAL for this module to compile.
-    /// </summary>
-    [AllowNull]
-    [Obsolete("Replaced by OptionalAPIs")]
-    public string[] ModuleOptionalDependancies { get; set; } // This will be removed in the future
-    /// <summary>
-    /// This property indicates which API modules are REQUIRED for this module to compile.
-    /// </summary>
-    [AllowNull]
     public string[] RequiredAPIs { get; set; }
     /// <summary>
     /// This property indicates which API modules are OPTIONAL for this module to compile.
