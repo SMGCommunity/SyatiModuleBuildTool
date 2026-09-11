@@ -5,7 +5,7 @@ A program to build Syati Modules. (Command line tool)
 ```bat
 SyatiModuleBuildTool.exe <REGION> <Path_To_Syati> <Path_To_Modules_Folder> <Path_To_Output>
 ```
-- Replace `<REGION>` with one of the following: `USA`, `PAL`, `JPN`, `KOR`, `TWN`. Choose the one that matches your game disc.
+- Replace `<REGION>` with one of the following: `SB4E`, `SB4P`, `SB4J`, `SB4K`, `SB4W`. Choose the one that matches your game disc.
 - Replace `<Path_To_Syati>` with the complete path to your Syati folder. If your path has spaces in it, surround it with Quotation Marks "
 - Replace `<Path_To_Modules>` with the complete path to the folder that you put the modules into. If your path has spaces in it, surround it with Quotation Marks "
 - Replace `<Path_To_Output>` with the complete path of the folder that you would like the resulting CustomCode.bin to be saved to. If your path has spaces in it, surround it with Quotation Marks "
